@@ -17,6 +17,7 @@
       --btn-hover: #f3f7fc;
       --accent: #ff8fb1;
       --food-glow: rgba(255, 161, 28, 0.24);
+      --collected-glow: rgba(126, 211, 240, 0.22);
     }
 
     * { box-sizing: border-box; }
@@ -118,6 +119,39 @@
       font-weight: 700;
       pointer-events: none;
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .collected-drop-btn {
+      position: absolute;
+      right: 20px;
+      top: 128px;
+      z-index: 4;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 2px solid #cfe6fb;
+      background: rgba(255,255,255,0.92);
+      color: #31577a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .collected-drop-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .collected-drop-btn strong {
+      font-size: 12px;
+      color: #55789b;
+    }
+
+    .collected-drop-btn span {
+      white-space: nowrap;
     }
 
     .status-bubble {
@@ -243,6 +277,12 @@
 
     .food-drop.visible {
       display: grid;
+    }
+
+    .food-drop.is-collected {
+      background: radial-gradient(circle, rgba(255,255,255,0.98) 0%, rgba(236,248,255,0.98) 64%, rgba(194,231,255,0.98) 100%);
+      border-color: #78b8e8;
+      box-shadow: 0 0 0 12px var(--collected-glow), 0 14px 20px rgba(15, 23, 42, 0.10);
     }
 
     .food-drop::after {
@@ -585,6 +625,13 @@
         max-width: 180px;
       }
 
+      .collected-drop-btn {
+        right: 10px;
+        top: 126px;
+        padding: 7px 10px;
+        font-size: 12px;
+      }
+
       .bottom-nav {
         gap: 8px;
         left: 10px;
@@ -615,6 +662,9 @@
 
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
     <div class="time-badge" id="timeBadge">ひる</div>
+    <button class="collected-drop-btn" id="collectedDropBtn" type="button" aria-label="集めた食材を落とす">
+      <span>ドロップ <strong id="collectedSummary">🐟0 / 🐚0</strong></span>
+    </button>
 
     <div class="play-area" id="playArea">
       <div class="stats">
@@ -777,6 +827,10 @@
 
         // core resources: 日常的に増減する基本リソース
         fish: 30,
+        collectedItems: {
+          fish: 0,
+          shell: 0
+        },
         hunger: 70,
         happiness: 72,
         stamina: 68,
@@ -896,6 +950,33 @@
 
     // 進化条件データ:
     // growth と minWeight を両方満たした段階が現在ステージになる。
+    const collectedItemTypes = [
+      {
+        key: 'fish',
+        name: 'あつめた小魚',
+        icon: '🐟',
+        desc: 'ゆっくり集まる軽いおやつ。まんぷくとごきげんが少し上がる。',
+        hungerGain: 5,
+        happinessGain: 2,
+        bondGain: 0,
+        staminaGain: 0,
+        growthGain: 0,
+        weightGain: 0.2
+      },
+      {
+        key: 'shell',
+        name: 'ひかる貝がら',
+        icon: '🐚',
+        desc: 'めずらしく見つかる貝がら。なかよしが上がり、まれにおまけがある。',
+        hungerGain: 0,
+        happinessGain: 0,
+        bondGain: 4,
+        staminaGain: 0,
+        growthGain: 0,
+        weightGain: 0
+      }
+    ];
+
     const stageThresholds = [
       { growth: 0, minWeight: 20 },
       { growth: 25, minWeight: 28 },
@@ -911,6 +992,8 @@
     const stageValue = document.getElementById('stageValue');
     const statusBubble = document.getElementById('statusBubble');
     const timeBadge = document.getElementById('timeBadge');
+    const collectedDropBtn = document.getElementById('collectedDropBtn');
+    const collectedSummary = document.getElementById('collectedSummary');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
     const staminaBar = document.getElementById('staminaBar');
@@ -1013,12 +1096,26 @@
       if (!loaded || typeof loaded !== 'object') return fallback;
       const normalized = { ...fallback, ...loaded };
       normalized.version = typeof loaded.version === 'number' ? loaded.version : fallback.version;
+      normalized.collectedItems = {
+        ...fallback.collectedItems,
+        ...(loaded.collectedItems && typeof loaded.collectedItems === 'object' ? loaded.collectedItems : {})
+      };
+      normalized.collectedItems.fish = Math.max(0, Number(normalized.collectedItems.fish) || 0);
+      normalized.collectedItems.shell = Math.max(0, Number(normalized.collectedItems.shell) || 0);
       return normalized;
     }
 
     function applyDelta(targetState, delta) {
       Object.entries(delta).forEach(([key, value]) => {
         if (typeof value !== 'number' || value === 0) return;
+        if (key === 'collectedFish') {
+          targetState.collectedItems.fish += value;
+          return;
+        }
+        if (key === 'collectedShell') {
+          targetState.collectedItems.shell += value;
+          return;
+        }
         targetState[key] += value;
       });
     }
@@ -1035,12 +1132,15 @@
     }
 
     function buildOfflineDelta(elapsedSec) {
-      return {
+      const delta = {
         hunger: -(elapsedSec * 0.02),
         happiness: -(elapsedSec * 0.015),
         stamina: elapsedSec * 0.01,
         weight: -(elapsedSec * 0.0018)
       };
+      delta.collectedFish = Math.floor(elapsedSec / 240);
+      delta.collectedShell = Math.floor(elapsedSec / 900);
+      return delta;
     }
 
     function bindEvents() {
@@ -1063,6 +1163,7 @@
       startTrainingBtn.addEventListener('click', startTraining);
       trainingTarget.addEventListener('click', onTrainingTap);
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
+      collectedDropBtn.addEventListener('click', dropCollectedItem);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
       bindIceSlideControls();
 
@@ -1255,11 +1356,12 @@
 
     function canUseAction(kind, item) {
       if (kind === 'food') return state.fish >= item.cost;
+      if (kind === 'collected') return (state.collectedItems[item.key] || 0) > 0;
       return state.stamina >= Math.max(8, item.minStamina - 8);
     }
 
     function prepareActionPlacement(kind, index) {
-      const item = kind === 'food' ? foodItems[index] : toyItems[index];
+      const item = kind === 'food' ? foodItems[index] : kind === 'toy' ? toyItems[index] : collectedItemTypes[index];
       if (!item || !canUseAction(kind, item)) return;
       pendingAction = {
         kind,
@@ -1269,10 +1371,14 @@
       placedAction = null;
       playArea.dataset.dropLabel = kind === 'food'
         ? `${item.name} を落としたい場所をタップ`
-        : getToyDropLabel(item);
+        : kind === 'toy'
+          ? getToyDropLabel(item)
+          : `${item.icon} ${item.name} を落としたい場所をタップ`;
       state.lastStatus = kind === 'food'
         ? `${item.name} を どこに落とすか 選んでいる`
-        : getToyReadyStatus(item);
+        : kind === 'toy'
+          ? getToyReadyStatus(item)
+          : `${item.name} を どこに落とすか 選んでいる`;
       renderFoodList();
       renderToyList();
       closePanels();
@@ -1295,6 +1401,7 @@
       placedAction = { x, y };
       actionDrop.textContent = pendingAction.item.icon;
       actionDrop.dataset.label = pendingAction.item.name;
+      actionDrop.classList.toggle('is-collected', pendingAction.kind === 'collected');
       actionDrop.classList.add('visible');
       updateActionDropPosition();
 
@@ -1305,7 +1412,9 @@
       setSealMode('walk', pendingAction.kind === 'toy' ? 7 : 6);
       state.lastStatus = pendingAction.kind === 'food'
         ? `${pendingAction.item.name} を 見つけて てくてく 向かっている`
-        : getToyChaseStatus(pendingAction.item);
+        : pendingAction.kind === 'toy'
+          ? getToyChaseStatus(pendingAction.item)
+          : `${pendingAction.item.icon} ${pendingAction.item.name} を 見つけて てくてく 向かっている`;
       render();
       saveState();
     }
@@ -1332,6 +1441,7 @@
     function canApplyAction(action, currentState) {
       if (!action) return false;
       if (action.kind === 'food') return currentState.fish >= action.item.cost;
+      if (action.kind === 'collected') return (currentState.collectedItems[action.item.key] || 0) > 0;
       return currentState.stamina >= action.item.minStamina;
     }
 
@@ -1347,6 +1457,11 @@
           fish: -action.item.cost,
           ...buildFoodDelta(action.item)
         };
+      }
+
+      if (action.kind === 'collected') {
+        if (!canApplyAction(action, currentState)) return {};
+        return buildCollectedItemDelta(action.item);
       }
 
       if (!canApplyAction(action, currentState)) {
@@ -1376,6 +1491,16 @@
         };
       }
 
+      if (action.kind === 'collected' && !canApplyAction(action, currentState)) {
+        return {
+          delta: {},
+          statusText: '落とせる食材が もう 残っていなかった',
+          floatText: null,
+          sealMode: null,
+          duration: 0
+        };
+      }
+
       if (action.kind === 'toy' && !canApplyAction(action, currentState)) {
         return {
           delta: buildActionDelta(action, currentState),
@@ -1388,7 +1513,9 @@
 
       return action.kind === 'food'
         ? buildFoodActionResult(action, currentState)
-        : buildToyActionResult(action, currentState);
+        : action.kind === 'collected'
+          ? buildCollectedActionResult(action, currentState)
+          : buildToyActionResult(action, currentState);
     }
 
     function buildFoodActionResult(action, currentState) {
@@ -1411,6 +1538,24 @@
       };
     }
 
+    function buildCollectedActionResult(action, currentState) {
+      const delta = buildActionDelta(action, currentState);
+      const bonusTriggered = action.item.key === 'shell' && ((delta.happiness || 0) > action.item.happinessGain);
+      return {
+        delta,
+        statusText: action.item.key === 'shell'
+          ? bonusTriggered
+            ? `${action.item.name} を ひろって うれしそう。きらっと おまけも見つけた`
+            : `${action.item.name} を ひろって だいじそうに している`
+          : `${action.item.name} を ぱくっと ひろって たべた`,
+        floatText: action.item.key === 'shell'
+          ? bonusTriggered ? '🐚 +なかよし +おまけ' : '🐚 +なかよし'
+          : '🐟 +まんぷく +ごきげん',
+        sealMode: action.item.key === 'fish' ? 'eat' : 'idle',
+        duration: action.item.key === 'fish' ? 1.8 : 1.4
+      };
+    }
+
     /**
      * result をまとめて反映する唯一の入口。
      * delta -> state 更新 -> status/float/sealMode の順で適用する。
@@ -1426,7 +1571,7 @@
     function resolvePendingAction() {
       const action = getResolvedAction();
       if (!action || !seal.actionTarget) return;
-      if (pendingAction.kind === 'food') {
+      if (pendingAction.kind === 'food' || pendingAction.kind === 'collected') {
         resolveFoodAction(action);
       } else {
         resolveToyAction(action);
@@ -1450,6 +1595,24 @@
       // 遊び解決: 成否や疲労分岐も buildActionResult 側に寄せる。
       applyResult(buildActionResult(action, state));
       finalizeResolvedAction();
+    }
+
+    function buildCollectedItemDelta(item) {
+      const delta = {
+        collectedFish: item.key === 'fish' ? -1 : 0,
+        collectedShell: item.key === 'shell' ? -1 : 0,
+        hunger: item.hungerGain,
+        happiness: item.happinessGain,
+        bond: item.bondGain,
+        stamina: item.staminaGain,
+        growth: item.growthGain,
+        weight: item.weightGain
+      };
+      if (item.key === 'shell' && Math.random() < 0.18) {
+        delta.happiness += 3;
+        delta.growth += 1;
+      }
+      return delta;
     }
 
     function buildFoodDelta(item) {
@@ -1494,7 +1657,7 @@
       pendingAction = null;
       placedAction = null;
       seal.actionTarget = null;
-      actionDrop.classList.remove('visible');
+      actionDrop.classList.remove('visible', 'is-collected');
       actionDrop.dataset.label = '';
       playArea.classList.remove('is-drop-mode');
       playArea.dataset.dropLabel = '';
@@ -1595,6 +1758,8 @@
       state.bond = clamp(state.bond, 0, 100);
       state.weight = clamp(state.weight, 16, 80);
       state.fish = Math.max(0, Math.floor(state.fish));
+      state.collectedItems.fish = Math.max(0, Math.floor(state.collectedItems.fish));
+      state.collectedItems.shell = Math.max(0, Math.floor(state.collectedItems.shell));
       state.trainingCount = Math.max(0, Math.floor(state.trainingCount));
     }
 
@@ -1704,6 +1869,7 @@
       // 時間経過で減衰・自然回復する値をまとめて更新する。
       applyDelta(state, buildPassiveStateDelta(dt));
       applyPassiveStateBonuses(dt);
+      collectPassiveItems(dt);
       clampState();
       updateTimeTheme();
     }
@@ -1721,6 +1887,21 @@
       if (state.hunger < 28) state.happiness -= dt * 0.2;
       if (state.happiness > 78) state.fish += dt * 0.7;
       if (state.bond > 60 && Math.random() < dt * 0.08) state.fish += 1;
+    }
+
+    function collectPassiveItems(dt) {
+      if (Math.random() < dt / 240) {
+        state.collectedItems.fish += 1;
+        if (!pendingAction && Math.random() < 0.3) {
+          state.lastStatus = '水辺で あつめた小魚を 1こ 見つけた';
+        }
+      }
+      if (Math.random() < dt / 780) {
+        state.collectedItems.shell += 1;
+        if (!pendingAction && Math.random() < 0.5) {
+          state.lastStatus = 'きらっと ひかる貝がらを 見つけた';
+        }
+      }
     }
 
     function tickSeal(dt) {
@@ -1772,7 +1953,9 @@
         setSealMode('walk', pendingAction.kind === 'toy' ? 4.8 : 4);
         state.lastStatus = pendingAction.kind === 'toy'
           ? `${pendingAction.item.name} を 追いかけて ダッシュしている`
-          : `${pendingAction.item.name} に まっすぐ 向かっている`;
+          : pendingAction.kind === 'collected'
+            ? `${pendingAction.item.icon} ${pendingAction.item.name} に まっすぐ 向かっている`
+            : `${pendingAction.item.name} に まっすぐ 向かっている`;
         return;
       }
 
@@ -1874,6 +2057,8 @@
       bondValue.textContent = Math.floor(state.bond);
       weightValue.textContent = state.weight.toFixed(1);
       timeBadge.style.display = state.showTime ? 'block' : 'none';
+      collectedSummary.textContent = `🐟${state.collectedItems.fish} / 🐚${state.collectedItems.shell}`;
+      collectedDropBtn.disabled = !getAvailableCollectedItems().length || Boolean(pendingAction);
       playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !placedAction));
     }
 
@@ -1888,6 +2073,26 @@
       el.style.top = `${y}px`;
       playArea.appendChild(el);
       setTimeout(() => el.remove(), 1000);
+    }
+
+    function dropCollectedItem() {
+      if (pendingAction) return;
+      const options = getAvailableCollectedItems();
+      if (!options.length) {
+        state.lastStatus = 'まだ 落とせる食材が 集まっていない';
+        spawnFloatText(null, null, 'まだない');
+        render();
+        return;
+      }
+      const item = randomFrom(options);
+      const index = collectedItemTypes.findIndex((entry) => entry.key === item.key);
+      if (index === -1) return;
+      prepareActionPlacement('collected', index);
+      spawnFloatText(null, null, `${item.icon} ドロップ準備`);
+    }
+
+    function getAvailableCollectedItems() {
+      return collectedItemTypes.filter((item) => (state.collectedItems[item.key] || 0) > 0);
     }
 
     function getMoveSpeedScale(chasingAction) {
