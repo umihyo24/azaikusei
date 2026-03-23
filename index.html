@@ -465,6 +465,85 @@
       color: var(--soft);
     }
 
+    .ice-slide-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: linear-gradient(180deg, rgba(200, 234, 255, 0.95) 0%, rgba(239, 248, 255, 0.98) 100%);
+      z-index: 12;
+    }
+
+    .ice-slide-overlay.open {
+      display: block;
+    }
+
+    .ice-slide-header {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2;
+      gap: 12px;
+    }
+
+    .ice-slide-badge {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.88);
+      border: 2px solid #cfe6fb;
+      color: #31577a;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .ice-slide-close {
+      border: none;
+      background: rgba(255,255,255,0.92);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #31577a;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .ice-slide-arena {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      cursor: none;
+    }
+
+    .ice-slide-arena::before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border: 3px solid rgba(79, 143, 196, 0.28);
+      border-radius: 28px;
+      pointer-events: none;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.42);
+    }
+
+    .ice-slide-seal {
+      position: absolute;
+      width: 132px;
+      pointer-events: none;
+      transform-origin: center center;
+      z-index: 1;
+      will-change: transform, left, top;
+    }
+
+    .ice-slide-seal img {
+      width: 100%;
+      display: block;
+      filter: drop-shadow(0 14px 14px rgba(30, 41, 59, 0.16));
+    }
+
     .night .game-shell,
     .night .game-shell .top-wave {
       transition: background 0.35s ease;
@@ -655,6 +734,25 @@
             </div>
             <button class="danger-btn" id="resetBtn">リセット</button>
           </div>
+          <div class="setting-row">
+            <div>
+              <strong>氷スライド</strong>
+              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">簡易テストモードを起動する</div>
+            </div>
+            <button class="action-btn" id="startIceSlideBtn">開始</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ice-slide-overlay" id="iceSlideOverlay">
+      <div class="ice-slide-header">
+        <div class="ice-slide-badge">氷スライド テスト</div>
+        <button class="ice-slide-close" id="closeIceSlideBtn">もどる</button>
+      </div>
+      <div class="ice-slide-arena" id="iceSlideArena">
+        <div class="ice-slide-seal" id="iceSlideSeal" aria-hidden="true">
+          <img src="seal.png" alt="" />
         </div>
       </div>
     </div>
@@ -836,6 +934,21 @@
     const timeToggle = document.getElementById('timeToggle');
     const volumeSlider = document.getElementById('volumeSlider');
     const resetBtn = document.getElementById('resetBtn');
+    const startIceSlideBtn = document.getElementById('startIceSlideBtn');
+    const iceSlideOverlay = document.getElementById('iceSlideOverlay');
+    const iceSlideArena = document.getElementById('iceSlideArena');
+    const iceSlideSeal = document.getElementById('iceSlideSeal');
+    const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
+
+    const ICE_SLIDE_CONFIG = {
+      initialSpeed: 180,
+      maxSpeed: 260,
+      friction: 0.98,
+      turnForce: 2.2,
+      wallBounceDamping: 0.8,
+      sealRadius: 44,
+      debugLogInterval: 0.35
+    };
 
     let state = loadState();
     let seal = {
@@ -857,6 +970,9 @@
       needed: 5
     };
 
+    let iceSlideMode = false;
+    let iceSlideInput = 0;
+    let iceSlideState = createIceSlideState();
     let pendingAction = null;
     let placedAction = null;
 
@@ -870,6 +986,7 @@
       applyOfflineProgress();
       updateStage();
       render();
+      window.startIceSlideMode = startIceSlideMode;
       requestAnimationFrame(loop);
       setInterval(saveState, 5000);
     }
@@ -945,6 +1062,9 @@
       sealButton.addEventListener('click', petSeal);
       startTrainingBtn.addEventListener('click', startTraining);
       trainingTarget.addEventListener('click', onTrainingTap);
+      startIceSlideBtn.addEventListener('click', startIceSlideMode);
+      closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
+      bindIceSlideControls();
 
       timeToggle.checked = state.showTime;
       volumeSlider.value = state.volume;
@@ -965,6 +1085,7 @@
         if (!ok) return;
         state = defaultState();
         training = { active: false, taps: 0, needed: 5 };
+        stopIceSlideMode();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
@@ -977,6 +1098,90 @@
 
       window.addEventListener('beforeunload', saveState);
       window.addEventListener('resize', placeSealInitially);
+    }
+
+    function createIceSlideState() {
+      return {
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+        debugTimer: 0
+      };
+    }
+
+    function bindIceSlideControls() {
+      window.addEventListener('keydown', onIceSlideKeyDown);
+      window.addEventListener('keyup', onIceSlideKeyUp);
+
+      iceSlideArena.addEventListener('contextmenu', (event) => {
+        if (!iceSlideMode) return;
+        event.preventDefault();
+      });
+
+      iceSlideArena.addEventListener('mousedown', onIceSlideMouseDown);
+      window.addEventListener('mouseup', onIceSlideMouseUp);
+    }
+
+    function onIceSlideKeyDown(event) {
+      if (!iceSlideMode) return;
+      if (event.key === 'ArrowLeft') {
+        iceSlideInput = -1;
+        event.preventDefault();
+      }
+      if (event.key === 'ArrowRight') {
+        iceSlideInput = 1;
+        event.preventDefault();
+      }
+    }
+
+    function onIceSlideKeyUp(event) {
+      if (!iceSlideMode) return;
+      if ((event.key === 'ArrowLeft' && iceSlideInput === -1) || (event.key === 'ArrowRight' && iceSlideInput === 1)) {
+        iceSlideInput = 0;
+        event.preventDefault();
+      }
+    }
+
+    function onIceSlideMouseDown(event) {
+      if (!iceSlideMode) return;
+      event.preventDefault();
+      if (event.button === 0) iceSlideInput = -1;
+      if (event.button === 2) iceSlideInput = 1;
+    }
+
+    function onIceSlideMouseUp(event) {
+      if (!iceSlideMode) return;
+      if ((event.button === 0 && iceSlideInput === -1) || (event.button === 2 && iceSlideInput === 1)) {
+        iceSlideInput = 0;
+      }
+    }
+
+    function startIceSlideMode() {
+      closePanels();
+      iceSlideMode = true;
+      iceSlideInput = 0;
+      initializeIceSlideState();
+      iceSlideOverlay.classList.add('open');
+      console.log('[iceSlide] start');
+    }
+
+    function stopIceSlideMode() {
+      iceSlideMode = false;
+      iceSlideInput = 0;
+      iceSlideOverlay.classList.remove('open');
+    }
+
+    function initializeIceSlideState() {
+      const arenaRect = iceSlideArena.getBoundingClientRect();
+      iceSlideState = createIceSlideState();
+      iceSlideState.x = arenaRect.width * 0.5;
+      iceSlideState.y = arenaRect.height * 0.58;
+      iceSlideState.angle = -Math.PI / 2;
+      iceSlideState.vx = Math.cos(iceSlideState.angle) * ICE_SLIDE_CONFIG.initialSpeed;
+      iceSlideState.vy = Math.sin(iceSlideState.angle) * ICE_SLIDE_CONFIG.initialSpeed;
+      renderIceSlide();
     }
 
     function placeSealInitially() {
@@ -1397,10 +1602,102 @@
     function loop(now) {
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
+      if (iceSlideMode) {
+        updateIceSlide(dt);
+        requestAnimationFrame(loop);
+        return;
+      }
       tickState(dt);
       tickSeal(dt);
       render();
       requestAnimationFrame(loop);
+    }
+
+    function updateIceSlide(dt) {
+      const turnAmount = iceSlideInput * ICE_SLIDE_CONFIG.turnForce * dt;
+      const rotatedVelocity = rotateVector(iceSlideState.vx, iceSlideState.vy, turnAmount);
+      iceSlideState.vx = rotatedVelocity.x;
+      iceSlideState.vy = rotatedVelocity.y;
+
+      const frictionFactor = Math.pow(ICE_SLIDE_CONFIG.friction, dt * 60);
+      iceSlideState.vx *= frictionFactor;
+      iceSlideState.vy *= frictionFactor;
+
+      const speed = Math.hypot(iceSlideState.vx, iceSlideState.vy);
+      const clampedSpeed = Math.min(ICE_SLIDE_CONFIG.maxSpeed, speed);
+      if (speed > 0 && clampedSpeed !== speed) {
+        const ratio = clampedSpeed / speed;
+        iceSlideState.vx *= ratio;
+        iceSlideState.vy *= ratio;
+      }
+
+      iceSlideState.x += iceSlideState.vx * dt;
+      iceSlideState.y += iceSlideState.vy * dt;
+      reflectIceSlideOnWalls();
+
+      if (Math.hypot(iceSlideState.vx, iceSlideState.vy) > 0.001) {
+        iceSlideState.angle = Math.atan2(iceSlideState.vy, iceSlideState.vx);
+      }
+
+      iceSlideState.debugTimer -= dt;
+      if (iceSlideState.debugTimer <= 0) {
+        console.log('[iceSlide]', {
+          speed: Math.round(Math.hypot(iceSlideState.vx, iceSlideState.vy)),
+          angle: Number(iceSlideState.angle.toFixed(2))
+        });
+        iceSlideState.debugTimer = ICE_SLIDE_CONFIG.debugLogInterval;
+      }
+
+      renderIceSlide();
+    }
+
+    function reflectIceSlideOnWalls() {
+      const arenaRect = iceSlideArena.getBoundingClientRect();
+      const minX = ICE_SLIDE_CONFIG.sealRadius;
+      const minY = ICE_SLIDE_CONFIG.sealRadius;
+      const maxX = arenaRect.width - ICE_SLIDE_CONFIG.sealRadius;
+      const maxY = arenaRect.height - ICE_SLIDE_CONFIG.sealRadius;
+      let bounced = false;
+
+      if (iceSlideState.x <= minX) {
+        iceSlideState.x = minX;
+        iceSlideState.vx = Math.abs(iceSlideState.vx);
+        bounced = true;
+      } else if (iceSlideState.x >= maxX) {
+        iceSlideState.x = maxX;
+        iceSlideState.vx = -Math.abs(iceSlideState.vx);
+        bounced = true;
+      }
+
+      if (iceSlideState.y <= minY) {
+        iceSlideState.y = minY;
+        iceSlideState.vy = Math.abs(iceSlideState.vy);
+        bounced = true;
+      } else if (iceSlideState.y >= maxY) {
+        iceSlideState.y = maxY;
+        iceSlideState.vy = -Math.abs(iceSlideState.vy);
+        bounced = true;
+      }
+
+      if (bounced) {
+        iceSlideState.vx *= ICE_SLIDE_CONFIG.wallBounceDamping;
+        iceSlideState.vy *= ICE_SLIDE_CONFIG.wallBounceDamping;
+      }
+    }
+
+    function renderIceSlide() {
+      iceSlideSeal.style.left = `${iceSlideState.x - 66}px`;
+      iceSlideSeal.style.top = `${iceSlideState.y - 66}px`;
+      iceSlideSeal.style.transform = `rotate(${iceSlideState.angle + Math.PI / 2}rad)`;
+    }
+
+    function rotateVector(vx, vy, angle) {
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return {
+        x: vx * cos - vy * sin,
+        y: vx * sin + vy * cos
+      };
     }
 
     function tickState(dt) {
