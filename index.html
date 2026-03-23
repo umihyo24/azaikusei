@@ -135,6 +135,20 @@
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
     }
 
+    .mood-badge {
+      position: absolute;
+      top: 150px;
+      left: 20px;
+      z-index: 3;
+      background: rgba(255,255,255,0.88);
+      border: 2px solid #d5e2f1;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--soft);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
     .stats {
       position: absolute;
       left: 20px;
@@ -614,6 +628,7 @@
     </div>
 
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
+    <div class="mood-badge" id="moodBadge">調子：のんびり</div>
     <div class="time-badge" id="timeBadge">ひる</div>
 
     <div class="play-area" id="playArea">
@@ -910,6 +925,7 @@
     const fishValue = document.getElementById('fishValue');
     const stageValue = document.getElementById('stageValue');
     const statusBubble = document.getElementById('statusBubble');
+    const moodBadge = document.getElementById('moodBadge');
     const timeBadge = document.getElementById('timeBadge');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
@@ -1859,10 +1875,19 @@
       timeBadge.textContent = isNight ? 'よる' : 'ひる';
     }
 
+    function getMood(currentState) {
+      if (currentState.stamina < 25) return 'ねむそう';
+      if (currentState.hunger < 25) return 'おなかすいた';
+      if (currentState.happiness > 75) return 'げんきいっぱい';
+      if (currentState.happiness > 50) return 'ごきげん';
+      return 'のんびり';
+    }
+
     function render() {
       fishValue.textContent = Math.floor(state.fish);
       stageValue.textContent = getStageLabel();
       statusBubble.textContent = state.lastStatus;
+      moodBadge.textContent = `調子：${getMood(state)}`;
       hungerBar.style.width = `${state.hunger}%`;
       happyBar.style.width = `${state.happiness}%`;
       staminaBar.style.width = `${state.stamina}%`;
