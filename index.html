@@ -505,6 +505,63 @@
       color: var(--soft);
     }
 
+    .omikuji-panel {
+      position: absolute;
+      right: 20px;
+      top: 132px;
+      z-index: 3;
+      width: min(230px, calc(100% - 40px));
+      padding: 12px;
+      background: rgba(255,255,255,0.9);
+      border: 2px solid #d5e2f1;
+      border-radius: 16px;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .omikuji-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .omikuji-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #48627f;
+    }
+
+    .omikuji-btn {
+      border: 1px solid #c7dbef;
+      background: #f7fbff;
+      color: #31577a;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .omikuji-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .omikuji-result {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--soft);
+      min-height: 42px;
+    }
+
+    .omikuji-meta {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #7f92ab;
+    }
+
     .ice-slide-overlay {
       position: absolute;
       inset: 0;
@@ -662,9 +719,14 @@
 
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
     <div class="time-badge" id="timeBadge">ひる</div>
-    <button class="collected-drop-btn" id="collectedDropBtn" type="button" aria-label="集めた食材を落とす">
-      <span>ドロップ <strong id="collectedSummary">🐟0 / 🐚0</strong></span>
-    </button>
+    <div class="omikuji-panel" id="omikujiPanel">
+      <div class="omikuji-header">
+        <div class="omikuji-title">きょうの おみくじ</div>
+        <button class="omikuji-btn" id="drawOmikujiBtn">ひく</button>
+      </div>
+      <p class="omikuji-result" id="omikujiResult">まだ引いていないよ。あざらしといっしょに運だめししてみよう。</p>
+      <div class="omikuji-meta" id="omikujiCooldown">いつでも引けるよ</div>
+    </div>
 
     <div class="play-area" id="playArea">
       <div class="stats">
@@ -845,9 +907,22 @@
 
         // settings: UI 表示やローカル設定
         volume: 70,
-        showTime: true
+        showTime: true,
+
+        // flavor: ゲーム進行に影響しない演出専用
+        lastOmikujiTime: 0,
+        currentOmikuji: ''
       };
     }
+
+    const OMIKUJI_COOLDOWN_MS = 60 * 60 * 1000;
+    const omikujiList = [
+      { rank: '大吉', text: 'だいきち！今日はいいことがありそう。あざらしもつやつやごきげん。' },
+      { rank: '中吉', text: 'ちゅうきち。のんびりいこう。あざらしとお昼寝すると運気もふわふわ。' },
+      { rank: '吉', text: 'きち。あざらしは元気そう。いつものペースがいちばん。' },
+      { rank: '末吉', text: 'すえきち。無理しないでね。あざらしみたいにゆっくり深呼吸。' },
+      { rank: '凶', text: 'きょう。ちょっとつかれてるかも。あざらしのまるさを見て落ち着こう。' }
+    ];
 
     // ごはん系データ:
     // cost は消費する魚、*Gain は各ステータスの増加量。
@@ -992,8 +1067,10 @@
     const stageValue = document.getElementById('stageValue');
     const statusBubble = document.getElementById('statusBubble');
     const timeBadge = document.getElementById('timeBadge');
-    const collectedDropBtn = document.getElementById('collectedDropBtn');
-    const collectedSummary = document.getElementById('collectedSummary');
+    const omikujiPanel = document.getElementById('omikujiPanel');
+    const drawOmikujiBtn = document.getElementById('drawOmikujiBtn');
+    const omikujiResult = document.getElementById('omikujiResult');
+    const omikujiCooldown = document.getElementById('omikujiCooldown');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
     const staminaBar = document.getElementById('staminaBar');
@@ -1165,6 +1242,7 @@
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
       collectedDropBtn.addEventListener('click', dropCollectedItem);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
+      drawOmikujiBtn.addEventListener('click', drawOmikuji);
       bindIceSlideControls();
 
       timeToggle.checked = state.showTime;
@@ -1193,6 +1271,7 @@
         placeSealInitially();
         renderFoodList();
         renderToyList();
+        renderOmikuji();
         render();
         saveState();
       });
@@ -1740,6 +1819,52 @@
       };
     }
 
+    function canDrawOmikuji(now = Date.now()) {
+      return now - state.lastOmikujiTime >= OMIKUJI_COOLDOWN_MS;
+    }
+
+    function drawOmikuji() {
+      const now = Date.now();
+      if (!canDrawOmikuji(now)) {
+        renderOmikuji(now);
+        state.lastStatus = 'おみくじは もう少ししてから 引けそう';
+        render();
+        return;
+      }
+
+      const result = randomFrom(omikujiList);
+      state.lastOmikujiTime = now;
+      state.currentOmikuji = `${result.rank}：${result.text}`;
+      state.lastStatus = `おみくじを引いた。あざらしも「${result.rank}」を見守っている`;
+      spawnFloatText(null, null, `${result.rank}！`);
+
+      if (typeof window.addLog === 'function') {
+        window.addLog(`おみくじを引いた：${result.rank}`);
+      }
+
+      renderOmikuji(now);
+      render();
+      saveState();
+    }
+
+    function renderOmikuji(now = Date.now()) {
+      omikujiResult.textContent = state.currentOmikuji || 'まだ引いていないよ。あざらしといっしょに運だめししてみよう。';
+      const remainingMs = Math.max(0, OMIKUJI_COOLDOWN_MS - (now - state.lastOmikujiTime));
+      const canDraw = canDrawOmikuji(now);
+
+      drawOmikujiBtn.disabled = !canDraw;
+      drawOmikujiBtn.textContent = canDraw ? 'ひく' : 'おやすみ中';
+      omikujiPanel.classList.toggle('is-cooldown', !canDraw);
+
+      if (canDraw) {
+        omikujiCooldown.textContent = 'いつでも引けるよ';
+        return;
+      }
+
+      const minutes = Math.ceil(remainingMs / 60000);
+      omikujiCooldown.textContent = `つぎは約 ${minutes} 分後に引けるよ`;
+    }
+
     function updateStage() {
       let nextStage = 0;
       for (let i = 0; i < stageThresholds.length; i += 1) {
@@ -2046,6 +2171,7 @@
       fishValue.textContent = Math.floor(state.fish);
       stageValue.textContent = getStageLabel();
       statusBubble.textContent = state.lastStatus;
+      renderOmikuji();
       hungerBar.style.width = `${state.hunger}%`;
       happyBar.style.width = `${state.happiness}%`;
       staminaBar.style.width = `${state.stamina}%`;
