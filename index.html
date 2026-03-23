@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>あざらし育成ゲーム</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --ice: #eef4fb;
+      --wave: #1ea3df;
+      --text: #334155;
+      --soft: #7c8aa0;
+      --card: #ffffff;
+      --line: #1f2937;
+      --btn: #ffffff;
+      --btn-hover: #f3f7fc;
+      --accent: #ff8fb1;
+      --food-glow: rgba(255, 161, 28, 0.24);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #e9edf3;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      color: var(--text);
+    }
+
+    .game-shell {
+      width: min(92vw, 760px);
+      aspect-ratio: 1.15 / 1;
+      background: var(--bg);
+      border: 3px solid #111827;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    }
+
+    .top-wave {
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 160px;
+      background: var(--wave);
+    }
+
+    .top-wave::after {
+      content: "";
+      position: absolute;
+      left: -6%;
+      right: -6%;
+      bottom: -32px;
+      height: 88px;
+      background: var(--bg);
+      border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+      transform: rotate(-2deg);
+    }
+
+    .hud {
+      position: absolute;
+      top: 16px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 3;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,.2);
+    }
+
+    .hud-box {
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 12px;
+      padding: 8px 12px;
+      backdrop-filter: blur(4px);
+    }
+
+    .hud-title {
+      font-size: 12px;
+      opacity: .95;
+      margin-bottom: 2px;
+    }
+
+    .hud-value {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .play-area {
+      position: absolute;
+      inset: 92px 16px 116px 16px;
+      overflow: hidden;
+    }
+
+    .play-area.is-drop-mode {
+      cursor: crosshair;
+    }
+
+    .play-area.is-drop-mode::after {
+      content: "エサを落としたい場所をタップ";
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      z-index: 5;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      border: 2px solid #f3d08b;
+      color: #8b5a00;
+      font-size: 12px;
+      font-weight: 700;
+      pointer-events: none;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .status-bubble {
+      position: absolute;
+      top: 88px;
+      left: 20px;
+      z-index: 3;
+      max-width: 250px;
+      background: rgba(255,255,255,0.9);
+      border: 2px solid #d5e2f1;
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--soft);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .stats {
+      position: absolute;
+      left: 20px;
+      bottom: 16px;
+      z-index: 3;
+      width: 210px;
+      padding: 12px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 16px;
+      border: 2px solid #d5e2f1;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .stats h2 {
+      font-size: 15px;
+      margin: 0 0 10px;
+    }
+
+    .stat-row {
+      display: grid;
+      grid-template-columns: 56px 1fr 38px;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .bar {
+      height: 10px;
+      background: #e6edf6;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      transition: width 0.25s ease;
+    }
+
+    .bar-hunger span { background: #5cb4ff; }
+    .bar-happy span { background: #ff9dbe; }
+    .bar-stamina span { background: #8fdc8f; }
+    .bar-bond span { background: #b49bff; }
+
+    .seal {
+      position: absolute;
+      width: 148px;
+      user-select: none;
+      cursor: pointer;
+      transform-origin: center bottom;
+      transition: transform 0.2s ease, filter 0.2s ease;
+      z-index: 1;
+      border: none;
+      background: transparent;
+      padding: 0;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .seal img {
+      width: 100%;
+      display: block;
+      pointer-events: none;
+      filter: drop-shadow(0 10px 8px rgba(30, 41, 59, 0.15));
+    }
+
+    .seal.is-pet {
+      transform: scale(1.06) translateY(-2px);
+    }
+
+    .seal.is-sleepy {
+      filter: saturate(0.85) brightness(0.95);
+    }
+
+    .seal-shadow {
+      position: absolute;
+      width: 120px;
+      height: 18px;
+      background: rgba(71, 85, 105, 0.16);
+      border-radius: 50%;
+      filter: blur(2px);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .food-drop {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      display: none;
+      place-items: center;
+      background: radial-gradient(circle, rgba(255,255,255,0.96) 0%, rgba(255,247,222,0.98) 62%, rgba(247,216,136,0.96) 100%);
+      border: 2px dashed #e6a737;
+      box-shadow: 0 0 0 12px var(--food-glow), 0 14px 20px rgba(15, 23, 42, 0.10);
+      font-size: 30px;
+      pointer-events: none;
+      z-index: 2;
+      animation: foodPulse 1.1s ease-in-out infinite;
+    }
+
+    .food-drop.visible {
+      display: grid;
+    }
+
+    .food-drop::after {
+      content: attr(data-label);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 700;
+      color: #8b5a00;
+      background: rgba(255,255,255,0.94);
+      border-radius: 999px;
+      padding: 4px 8px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .float-text {
+      position: absolute;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ff6fa0;
+      text-shadow: 0 1px 0 white;
+      animation: floatUp 1s ease forwards;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    @keyframes floatUp {
+      0% { opacity: 0; transform: translateY(0) scale(.9); }
+      15% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-38px) scale(1.05); }
+    }
+
+    @keyframes foodPulse {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-3px) scale(1.04); }
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      z-index: 4;
+    }
+
+    .nav-btn {
+      border: 3px solid #1f2937;
+      background: var(--btn);
+      border-radius: 0;
+      font-size: clamp(18px, 2vw, 22px);
+      padding: 22px 10px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.08s ease;
+    }
+
+    .nav-btn:hover { background: var(--btn-hover); }
+    .nav-btn:active { transform: translateY(2px); }
+
+    .panel-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.28);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 10;
+    }
+
+    .panel-backdrop.open { display: flex; }
+
+    .panel {
+      width: min(100%, 520px);
+      background: #fff;
+      border-radius: 20px;
+      border: 3px solid #d9e4f1;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+      padding: 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .panel-header h3 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .close-btn {
+      border: none;
+      background: #eef4fb;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .food-list, .training-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .option-card {
+      border: 2px solid #d6e3f1;
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .option-card h4 {
+      margin: 0 0 6px;
+      font-size: 17px;
+    }
+
+    .option-card p {
+      margin: 0;
+      color: var(--soft);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .action-btn {
+      border: none;
+      background: #1ea3df;
+      color: white;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      min-width: 92px;
+    }
+
+    .action-btn:disabled {
+      background: #aacfe0;
+      cursor: not-allowed;
+    }
+
+    .settings-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #e6eef6;
+    }
+
+    .setting-row:last-child { border-bottom: none; }
+
+    .danger-btn {
+      border: none;
+      background: #ef4444;
+      color: white;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .training-box {
+      border: 2px dashed #d6e3f1;
+      border-radius: 18px;
+      padding: 16px;
+      text-align: center;
+      margin-top: 8px;
+      background: #f8fbff;
+    }
+
+    .training-target {
+      width: 72px;
+      height: 72px;
+      border-radius: 999px;
+      margin: 12px auto;
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      background: #d7f0ff;
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    .training-target:hover { transform: scale(1.05); }
+
+    .time-badge {
+      position: absolute;
+      right: 20px;
+      top: 88px;
+      z-index: 3;
+      background: rgba(255,255,255,0.86);
+      border: 2px solid #d5e2f1;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--soft);
+    }
+
+    .night .game-shell,
+    .night .game-shell .top-wave {
+      transition: background 0.35s ease;
+    }
+
+    .night .game-shell {
+      background: #edf2fb;
+    }
+
+    .night .top-wave {
+      background: #3569b8;
+    }
+
+    .night .top-wave::before {
+      content: "🌙";
+      position: absolute;
+      right: 34px;
+      top: 22px;
+      font-size: 30px;
+      z-index: 1;
+    }
+
+    @media (max-width: 680px) {
+      .game-shell {
+        width: 96vw;
+        aspect-ratio: auto;
+        height: 92vh;
+      }
+
+      .play-area {
+        inset: 92px 10px 128px 10px;
+      }
+
+      .stats {
+        width: 180px;
+      }
+
+      .status-bubble {
+        max-width: 180px;
+      }
+
+      .bottom-nav {
+        gap: 8px;
+        left: 10px;
+        right: 10px;
+      }
+
+      .nav-btn {
+        padding: 18px 8px;
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-shell" id="gameShell">
+    <div class="top-wave"></div>
+
+    <div class="hud">
+      <div class="hud-box">
+        <div class="hud-title">おさかな</div>
+        <div class="hud-value" id="fishValue">30</div>
+      </div>
+      <div class="hud-box">
+        <div class="hud-title">あざらし</div>
+        <div class="hud-value" id="stageValue">あかちゃん</div>
+      </div>
+    </div>
+
+    <div class="status-bubble" id="statusBubble">のんびりしている</div>
+    <div class="time-badge" id="timeBadge">ひる</div>
+
+    <div class="play-area" id="playArea">
+      <div class="stats">
+        <h2>ようす</h2>
+        <div class="stat-row">
+          <span>まんぷく</span>
+          <div class="bar bar-hunger"><span id="hungerBar"></span></div>
+          <strong id="hungerValue">70</strong>
+        </div>
+        <div class="stat-row">
+          <span>ごきげん</span>
+          <div class="bar bar-happy"><span id="happyBar"></span></div>
+          <strong id="happyValue">72</strong>
+        </div>
+        <div class="stat-row">
+          <span>たいりょく</span>
+          <div class="bar bar-stamina"><span id="staminaBar"></span></div>
+          <strong id="staminaValue">68</strong>
+        </div>
+        <div class="stat-row">
+          <span>なかよし</span>
+          <div class="bar bar-bond"><span id="bondBar"></span></div>
+          <strong id="bondValue">20</strong>
+        </div>
+      </div>
+
+      <div class="seal-shadow" id="sealShadow"></div>
+      <div class="food-drop" id="foodDrop" aria-hidden="true">🐟</div>
+      <button class="seal" id="sealButton" aria-label="あざらしをなでる">
+        <img src="seal.png" alt="あざらし" />
+      </button>
+    </div>
+
+    <div class="bottom-nav">
+      <button class="nav-btn" data-panel="food">ごはん 🍚</button>
+      <button class="nav-btn" data-panel="training">トレーニング</button>
+      <button class="nav-btn" data-panel="settings">せってい</button>
+    </div>
+
+    <div class="panel-backdrop" id="foodPanel">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>ごはん</h3>
+          <button class="close-btn" data-close>×</button>
+        </div>
+        <div class="food-list" id="foodList"></div>
+      </div>
+    </div>
+
+    <div class="panel-backdrop" id="trainingPanel">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>トレーニング</h3>
+          <button class="close-btn" data-close>×</button>
+        </div>
+        <div class="training-list">
+          <div class="option-card">
+            <div>
+              <h4>さかなタッチ</h4>
+              <p>30秒でできる軽いミニゲーム。成功すると、たいりょくとなかよしが上がる。</p>
+            </div>
+            <button class="action-btn" id="startTrainingBtn">はじめる</button>
+          </div>
+        </div>
+        <div class="training-box" id="trainingBox" hidden>
+          <div id="trainingText">うごく さかな を 5回 タップしよう</div>
+          <div class="training-target" id="trainingTarget">🐟</div>
+          <div id="trainingProgress">0 / 5</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-backdrop" id="settingsPanel">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>せってい</h3>
+          <button class="close-btn" data-close>×</button>
+        </div>
+        <div class="settings-grid">
+          <div class="setting-row">
+            <div>
+              <strong>時間表示</strong>
+              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">昼・夜の表示を切り替える</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="timeToggle" checked />
+              表示する
+            </label>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>音量</strong>
+              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">今はUIだけ。あとで音をつなげやすくしてある</div>
+            </div>
+            <input type="range" min="0" max="100" value="70" id="volumeSlider" />
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>セーブ初期化</strong>
+              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">状態を最初からに戻す</div>
+            </div>
+            <button class="danger-btn" id="resetBtn">リセット</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SAVE_KEY = 'seal-game-save-v1';
+
+    const defaultState = () => ({
+      fish: 30,
+      hunger: 70,
+      happiness: 72,
+      stamina: 68,
+      bond: 20,
+      growth: 0,
+      stage: 0,
+      volume: 70,
+      showTime: true,
+      lastTick: Date.now(),
+      lastStatus: 'のんびりしている'
+    });
+
+    const foodItems = [
+      {
+        name: 'こざかな',
+        icon: '🐟',
+        cost: 5,
+        desc: 'まんぷくをしっかり回復。気軽にあげやすい基本ごはん。',
+        apply(state) {
+          state.hunger += 18;
+          state.happiness += 4;
+          state.growth += 4;
+        }
+      },
+      {
+        name: 'エビのおやつ',
+        icon: '🦐',
+        cost: 10,
+        desc: 'ごきげん重視。少しぜいたくで、なかよし度も上がりやすい。',
+        apply(state) {
+          state.hunger += 10;
+          state.happiness += 12;
+          state.bond += 5;
+          state.growth += 3;
+        }
+      },
+      {
+        name: 'ごほうびプレート',
+        icon: '🍣',
+        cost: 18,
+        desc: 'たいりょくも回復する特別メニュー。成長にも少し効く。',
+        apply(state) {
+          state.hunger += 20;
+          state.happiness += 8;
+          state.stamina += 12;
+          state.bond += 3;
+          state.growth += 7;
+        }
+      }
+    ];
+
+    const stageNames = ['あかちゃん', 'こども', 'おとな', 'ごきげん名人'];
+    const stageThresholds = [0, 25, 60, 110];
+    const playArea = document.getElementById('playArea');
+    const sealButton = document.getElementById('sealButton');
+    const sealShadow = document.getElementById('sealShadow');
+    const foodDrop = document.getElementById('foodDrop');
+    const fishValue = document.getElementById('fishValue');
+    const stageValue = document.getElementById('stageValue');
+    const statusBubble = document.getElementById('statusBubble');
+    const timeBadge = document.getElementById('timeBadge');
+    const hungerBar = document.getElementById('hungerBar');
+    const happyBar = document.getElementById('happyBar');
+    const staminaBar = document.getElementById('staminaBar');
+    const bondBar = document.getElementById('bondBar');
+    const hungerValue = document.getElementById('hungerValue');
+    const happyValue = document.getElementById('happyValue');
+    const staminaValue = document.getElementById('staminaValue');
+    const bondValue = document.getElementById('bondValue');
+    const foodPanel = document.getElementById('foodPanel');
+    const trainingPanel = document.getElementById('trainingPanel');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const foodList = document.getElementById('foodList');
+    const startTrainingBtn = document.getElementById('startTrainingBtn');
+    const trainingBox = document.getElementById('trainingBox');
+    const trainingTarget = document.getElementById('trainingTarget');
+    const trainingProgress = document.getElementById('trainingProgress');
+    const timeToggle = document.getElementById('timeToggle');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let state = loadState();
+    let seal = {
+      x: 0,
+      y: 0,
+      targetX: 0,
+      mode: 'idle',
+      timer: 0,
+      speed: 32,
+      facing: 1,
+      bob: 0,
+      foodTarget: null
+    };
+
+    let training = {
+      active: false,
+      taps: 0,
+      needed: 5
+    };
+
+    let pendingFood = null;
+
+    init();
+
+    function init() {
+      placeSealInitially();
+      renderFoodList();
+      bindEvents();
+      applyOfflineProgress();
+      updateStage();
+      render();
+      requestAnimationFrame(loop);
+      setInterval(saveState, 5000);
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return defaultState();
+        return { ...defaultState(), ...JSON.parse(raw) };
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function saveState() {
+      state.lastTick = Date.now();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }
+
+    function applyOfflineProgress() {
+      const now = Date.now();
+      const elapsedSec = Math.min(60 * 60, Math.max(0, Math.floor((now - state.lastTick) / 1000)));
+      if (elapsedSec > 5) {
+        state.hunger -= elapsedSec * 0.02;
+        state.happiness -= elapsedSec * 0.015;
+        state.stamina += elapsedSec * 0.01;
+        clampState();
+        state.lastStatus = `おるすばん中に ${Math.floor(elapsedSec / 6)} 秒ぶん すごした`;
+      }
+      state.lastTick = now;
+    }
+
+    function bindEvents() {
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => openPanel(btn.dataset.panel));
+      });
+
+      document.querySelectorAll('[data-close]').forEach(btn => {
+        btn.addEventListener('click', closePanels);
+      });
+
+      [foodPanel, trainingPanel, settingsPanel].forEach(panel => {
+        panel.addEventListener('click', (e) => {
+          if (e.target === panel) closePanels();
+        });
+      });
+
+      playArea.addEventListener('click', onPlayAreaClick);
+      sealButton.addEventListener('click', petSeal);
+      startTrainingBtn.addEventListener('click', startTraining);
+      trainingTarget.addEventListener('click', onTrainingTap);
+
+      timeToggle.checked = state.showTime;
+      volumeSlider.value = state.volume;
+
+      timeToggle.addEventListener('change', () => {
+        state.showTime = timeToggle.checked;
+        render();
+        saveState();
+      });
+
+      volumeSlider.addEventListener('input', () => {
+        state.volume = Number(volumeSlider.value);
+        saveState();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        const ok = confirm('ほんまにリセットする？');
+        if (!ok) return;
+        state = defaultState();
+        training = { active: false, taps: 0, needed: 5 };
+        trainingBox.hidden = true;
+        clearPendingFood();
+        closePanels();
+        placeSealInitially();
+        renderFoodList();
+        render();
+        saveState();
+      });
+
+      window.addEventListener('beforeunload', saveState);
+      window.addEventListener('resize', placeSealInitially);
+    }
+
+    function placeSealInitially() {
+      const area = playArea.getBoundingClientRect();
+      seal.x = Math.max(area.width * 0.74, 420);
+      seal.y = area.height * 0.78;
+      seal.targetX = seal.x;
+      updateSealPosition();
+      if (pendingFood && pendingFood.isPlaced) {
+        const maxX = Math.max(120, area.width - 48);
+        pendingFood.x = clamp(pendingFood.x, 240, maxX);
+        pendingFood.y = clamp(pendingFood.y, 32, area.height - 42);
+        updateFoodDropPosition();
+      }
+    }
+
+    function openPanel(name) {
+      closePanels();
+      if (name === 'food') {
+        renderFoodList();
+        foodPanel.classList.add('open');
+      }
+      if (name === 'training') trainingPanel.classList.add('open');
+      if (name === 'settings') settingsPanel.classList.add('open');
+    }
+
+    function closePanels() {
+      foodPanel.classList.remove('open');
+      trainingPanel.classList.remove('open');
+      settingsPanel.classList.remove('open');
+    }
+
+    function renderFoodList() {
+      foodList.innerHTML = '';
+      foodItems.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'option-card';
+        const canBuy = state.fish >= item.cost;
+        const isSelected = pendingFood && pendingFood.index === index && !pendingFood.isPlaced;
+        card.innerHTML = `
+          <div>
+            <h4>${item.icon} ${item.name}</h4>
+            <p>${item.desc}<br>必要なおさかな: ${item.cost}</p>
+          </div>
+          <button class="action-btn" ${canBuy ? '' : 'disabled'} data-food-index="${index}">${isSelected ? 'えらび中' : 'あげる'}</button>
+        `;
+        foodList.appendChild(card);
+      });
+
+      foodList.querySelectorAll('[data-food-index]').forEach(btn => {
+        btn.addEventListener('click', () => prepareFoodDrop(Number(btn.dataset.foodIndex)));
+      });
+    }
+
+    function prepareFoodDrop(index) {
+      const item = foodItems[index];
+      if (state.fish < item.cost) return;
+      pendingFood = {
+        index,
+        item,
+        isPlaced: false,
+        x: 0,
+        y: 0
+      };
+      state.lastStatus = `${item.name} を どこに落とすか 選んでいる`;
+      renderFoodList();
+      closePanels();
+      render();
+    }
+
+    function onPlayAreaClick(event) {
+      if (!pendingFood || pendingFood.isPlaced) return;
+      if (event.target.closest('.stats')) return;
+      if (event.target.closest('.seal')) return;
+
+      const rect = playArea.getBoundingClientRect();
+      const dropX = clamp(event.clientX - rect.left, 240, rect.width - 48);
+      const dropY = clamp(event.clientY - rect.top, 34, rect.height - 42);
+      placeFoodAt(dropX, dropY);
+    }
+
+    function placeFoodAt(x, y) {
+      if (!pendingFood) return;
+      pendingFood.x = x;
+      pendingFood.y = y;
+      pendingFood.isPlaced = true;
+      foodDrop.textContent = pendingFood.item.icon;
+      foodDrop.dataset.label = pendingFood.item.name;
+      foodDrop.classList.add('visible');
+      updateFoodDropPosition();
+
+      seal.foodTarget = { x, y, index: pendingFood.index };
+      seal.targetX = x;
+      seal.facing = x < seal.x ? -1 : 1;
+      setSealMode('walk', 6);
+      state.lastStatus = `${pendingFood.item.name} を 見つけて てくてく 向かっている`;
+      render();
+      saveState();
+    }
+
+    function resolveFoodArrival() {
+      if (!pendingFood || !pendingFood.isPlaced || !seal.foodTarget) return;
+      const item = pendingFood.item;
+      if (state.fish < item.cost) {
+        clearPendingFood();
+        state.lastStatus = 'おさかなが 足りなくて ごはんを 用意できなかった';
+        renderFoodList();
+        render();
+        return;
+      }
+
+      state.fish -= item.cost;
+      item.apply(state);
+      state.lastStatus = `${item.name} を 見つけて その場でもぐもぐ 食べた`;
+      spawnFloatText(null, null, `+${item.name}`);
+      setSealMode('eat', 2.2);
+      updateStage();
+      clampState();
+      clearPendingFood();
+      renderFoodList();
+      render();
+      saveState();
+    }
+
+    function clearPendingFood() {
+      pendingFood = null;
+      seal.foodTarget = null;
+      foodDrop.classList.remove('visible');
+      foodDrop.dataset.label = '';
+      playArea.classList.remove('is-drop-mode');
+    }
+
+    function updateFoodDropPosition() {
+      if (!pendingFood || !pendingFood.isPlaced) return;
+      foodDrop.style.left = `${pendingFood.x - 32}px`;
+      foodDrop.style.top = `${pendingFood.y - 32}px`;
+    }
+
+    function petSeal(e) {
+      if (pendingFood && !pendingFood.isPlaced) return;
+      state.happiness += 4;
+      state.bond += 2;
+      state.stamina -= 1;
+      state.growth += 1;
+      if (state.happiness > 80) state.fish += 2;
+      state.lastStatus = randomFrom([
+        'うれしそうに こちらを見ている',
+        'ぷにっとして ごきげん',
+        'しっぽを ぱたぱた している',
+        'なでられて まんぞくそう'
+      ]);
+      updateStage();
+      clampState();
+      sealButton.classList.add('is-pet');
+      setTimeout(() => sealButton.classList.remove('is-pet'), 180);
+      spawnFloatText(e ? e.clientX : null, e ? e.clientY : null, '+なかよし');
+      render();
+      saveState();
+    }
+
+    function startTraining() {
+      training.active = true;
+      training.taps = 0;
+      trainingBox.hidden = false;
+      trainingProgress.textContent = `0 / ${training.needed}`;
+      trainingTarget.textContent = '🐟';
+      state.lastStatus = 'トレーニングを はじめた';
+      render();
+    }
+
+    function onTrainingTap() {
+      if (!training.active) return;
+      training.taps += 1;
+      trainingProgress.textContent = `${training.taps} / ${training.needed}`;
+      trainingTarget.style.transform = 'scale(0.92)';
+      setTimeout(() => { trainingTarget.style.transform = ''; }, 90);
+      if (training.taps >= training.needed) {
+        training.active = false;
+        state.stamina += 10;
+        state.happiness += 6;
+        state.bond += 6;
+        state.growth += 4;
+        state.lastStatus = 'トレーニング成功。ちょっと たくましく なった';
+        updateStage();
+        clampState();
+        trainingBox.hidden = true;
+        render();
+        saveState();
+      }
+    }
+
+    function updateStage() {
+      let nextStage = 0;
+      for (let i = 0; i < stageThresholds.length; i += 1) {
+        if (state.growth >= stageThresholds[i]) nextStage = i;
+      }
+      state.stage = nextStage;
+    }
+
+    function clampState() {
+      state.hunger = clamp(state.hunger, 0, 100);
+      state.happiness = clamp(state.happiness, 0, 100);
+      state.stamina = clamp(state.stamina, 0, 100);
+      state.bond = clamp(state.bond, 0, 100);
+      state.fish = Math.max(0, Math.floor(state.fish));
+    }
+
+    let lastTime = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+      tickState(dt);
+      tickSeal(dt);
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    function tickState(dt) {
+      state.hunger -= dt * 0.65;
+      state.happiness -= dt * 0.14;
+      state.stamina += dt * (seal.mode === 'sleep' ? 2.2 : 0.22);
+      if (state.hunger < 28) state.happiness -= dt * 0.2;
+      if (state.happiness > 78) state.fish += dt * 0.7;
+      if (state.bond > 60 && Math.random() < dt * 0.08) state.fish += 1;
+      clampState();
+      updateTimeTheme();
+    }
+
+    function tickSeal(dt) {
+      seal.timer -= dt;
+      seal.bob += dt * 4;
+
+      if (seal.timer <= 0) chooseNextSealAction();
+
+      if (seal.mode === 'walk') {
+        const dx = seal.targetX - seal.x;
+        const dir = Math.sign(dx) || 1;
+        seal.facing = dir;
+        const chasingFood = Boolean(seal.foodTarget);
+        const speedScale = chasingFood ? 1.45 : state.hunger < 25 ? 0.55 : state.happiness > 70 ? 1.2 : 1;
+        const move = dir * seal.speed * speedScale * dt;
+        if (Math.abs(dx) <= Math.abs(move)) {
+          seal.x = seal.targetX;
+          if (seal.foodTarget) {
+            resolveFoodArrival();
+          } else {
+            setSealMode('idle', 1 + Math.random() * 2);
+          }
+        } else {
+          seal.x += move;
+        }
+      }
+
+      updateSealPosition();
+    }
+
+    function chooseNextSealAction() {
+      if (seal.foodTarget) {
+        seal.targetX = seal.foodTarget.x;
+        setSealMode('walk', 4);
+        state.lastStatus = `${pendingFood.item.name} に まっすぐ 向かっている`;
+        return;
+      }
+
+      if (seal.mode === 'eat') {
+        setSealMode('idle', 1.4);
+        return;
+      }
+
+      const sleepy = state.stamina < 25;
+      const hungry = state.hunger < 25;
+      const lively = state.happiness > 70;
+      const roll = Math.random();
+
+      if (sleepy && roll < 0.45) {
+        setSealMode('sleep', 3 + Math.random() * 3);
+        state.lastStatus = 'すやすや 眠っている';
+        return;
+      }
+
+      if (hungry && roll < 0.4) {
+        setSealMode('sit', 2 + Math.random() * 2);
+        state.lastStatus = 'おなかが すいて ちょっと ぼんやり';
+        return;
+      }
+
+      if (lively && roll < 0.6) {
+        seal.targetX = randomSealX();
+        setSealMode('walk', 2 + Math.random() * 3);
+        state.lastStatus = randomFrom([
+          'のそのそ 歩きまわっている',
+          '楽しそうに うろうろ している',
+          '氷の上を すべるように 動いた'
+        ]);
+        return;
+      }
+
+      if (roll < 0.5) {
+        setSealMode('idle', 1.5 + Math.random() * 2.5);
+        state.lastStatus = randomFrom([
+          'のんびりしている',
+          'こちらを じっと 見ている',
+          '気ままに ごろごろ している'
+        ]);
+      } else {
+        seal.targetX = randomSealX();
+        setSealMode('walk', 2 + Math.random() * 3);
+        state.lastStatus = 'てくてく 歩いている';
+      }
+    }
+
+    function setSealMode(mode, duration) {
+      seal.mode = mode;
+      seal.timer = duration;
+    }
+
+    function randomSealX() {
+      const area = playArea.getBoundingClientRect();
+      const minX = Math.max(360, area.width * 0.55);
+      const maxX = Math.max(minX + 20, area.width - 100);
+      return clamp(minX + Math.random() * (maxX - minX), minX, maxX);
+    }
+
+    function updateSealPosition() {
+      const baseY = seal.y + Math.sin(seal.bob) * (seal.mode === 'walk' ? 4 : 1);
+      const scale = [0.8, 0.92, 1.02, 1.12][state.stage] || 1;
+      const rotation = seal.mode === 'sleep' ? -7 : seal.mode === 'sit' ? -3 : 0;
+      const facingScale = seal.facing === -1 ? -1 : 1;
+      sealButton.style.left = `${seal.x - 74}px`;
+      sealButton.style.top = `${baseY - 74}px`;
+      sealButton.style.transform = `scale(${facingScale * scale}, ${scale}) rotate(${rotation}deg)`;
+      sealShadow.style.left = `${seal.x - 60}px`;
+      sealShadow.style.top = `${seal.y + 48}px`;
+      sealShadow.style.width = `${118 * scale}px`;
+      sealShadow.style.opacity = seal.mode === 'walk' ? '0.13' : '0.18';
+      sealButton.classList.toggle('is-sleepy', state.stamina < 25 || seal.mode === 'sleep');
+    }
+
+    function updateTimeTheme() {
+      const hour = new Date().getHours();
+      const isNight = hour < 6 || hour >= 18;
+      document.body.classList.toggle('night', isNight);
+      timeBadge.textContent = isNight ? 'よる' : 'ひる';
+    }
+
+    function render() {
+      fishValue.textContent = Math.floor(state.fish);
+      stageValue.textContent = stageNames[state.stage];
+      statusBubble.textContent = state.lastStatus;
+      hungerBar.style.width = `${state.hunger}%`;
+      happyBar.style.width = `${state.happiness}%`;
+      staminaBar.style.width = `${state.stamina}%`;
+      bondBar.style.width = `${state.bond}%`;
+      hungerValue.textContent = Math.floor(state.hunger);
+      happyValue.textContent = Math.floor(state.happiness);
+      staminaValue.textContent = Math.floor(state.stamina);
+      bondValue.textContent = Math.floor(state.bond);
+      timeBadge.style.display = state.showTime ? 'block' : 'none';
+      playArea.classList.toggle('is-drop-mode', Boolean(pendingFood && !pendingFood.isPlaced));
+    }
+
+    function spawnFloatText(clientX, clientY, text) {
+      const rect = playArea.getBoundingClientRect();
+      const el = document.createElement('div');
+      el.className = 'float-text';
+      el.textContent = text;
+      const x = clientX ? clientX - rect.left : seal.x;
+      const y = clientY ? clientY - rect.top : seal.y;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      playArea.appendChild(el);
+      setTimeout(() => el.remove(), 1000);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function randomFrom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+  </script>
+</body>
+</html>
