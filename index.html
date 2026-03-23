@@ -662,6 +662,7 @@
 
   <script>
     const SAVE_KEY = 'seal-game-save-v2';
+    const SAVE_VERSION = 2;
 
     const PERSONALITY_PRESETS = {
       playful: { label: 'あそび好き', toySpeedBonus: 0.24, toyMoodBonus: 1.2 },
@@ -669,23 +670,35 @@
       earnest: { label: 'がんばりや', toySpeedBonus: 0.16, toyMoodBonus: 1.05 }
     };
 
-    const defaultState = () => ({
-      fish: 30,
-      hunger: 70,
-      happiness: 72,
-      stamina: 68,
-      bond: 20,
-      weight: 38,
-      growth: 0,
-      stage: 0,
-      trainingCount: 0,
-      personality: 'playful',
-      volume: 70,
-      showTime: true,
-      lastTick: Date.now(),
-      lastStatus: 'のんびりしている'
-    });
+    function defaultState() {
+      return {
+        // save/meta: セーブ互換性と前回更新時刻の管理
+        version: SAVE_VERSION,
+        lastTick: Date.now(),
+        lastStatus: 'のんびりしている',
 
+        // core resources: 日常的に増減する基本リソース
+        fish: 30,
+        hunger: 70,
+        happiness: 72,
+        stamina: 68,
+        bond: 20,
+        weight: 38,
+
+        // progress: 成長や分岐に関わる恒久的な進行値
+        growth: 0,
+        stage: 0,
+        trainingCount: 0,
+        personality: 'playful',
+
+        // settings: UI 表示やローカル設定
+        volume: 70,
+        showTime: true
+      };
+    }
+
+    // ごはん系データ:
+    // cost は消費する魚、*Gain は各ステータスの増加量。
     const foodItems = [
       {
         name: 'こざかな',
@@ -725,6 +738,8 @@
       }
     ];
 
+    // おもちゃ系データ:
+    // minStamina は必要体力、staminaCost は消費体力、weightDelta は体重変化。
     const toyItems = [
       {
         name: 'やわらかボール',
@@ -781,6 +796,8 @@
       }
     ];
 
+    // 進化条件データ:
+    // growth と minWeight を両方満たした段階が現在ステージになる。
     const stageThresholds = [
       { growth: 0, minWeight: 20 },
       { growth: 25, minWeight: 28 },
@@ -860,29 +877,52 @@
       try {
         const raw = localStorage.getItem(SAVE_KEY);
         if (!raw) return defaultState();
-        return { ...defaultState(), ...JSON.parse(raw) };
+        const parsed = JSON.parse(raw);
+        return normalizeLoadedState(parsed);
       } catch {
         return defaultState();
       }
     }
 
     function saveState() {
+      state.version = SAVE_VERSION;
       state.lastTick = Date.now();
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }
+
+    function normalizeLoadedState(loaded) {
+      const fallback = defaultState();
+      if (!loaded || typeof loaded !== 'object') return fallback;
+      const normalized = { ...fallback, ...loaded };
+      normalized.version = typeof loaded.version === 'number' ? loaded.version : fallback.version;
+      return normalized;
+    }
+
+    function applyDelta(targetState, delta) {
+      Object.entries(delta).forEach(([key, value]) => {
+        if (typeof value !== 'number' || value === 0) return;
+        targetState[key] += value;
+      });
     }
 
     function applyOfflineProgress() {
       const now = Date.now();
       const elapsedSec = Math.min(60 * 60, Math.max(0, Math.floor((now - state.lastTick) / 1000)));
       if (elapsedSec > 5) {
-        state.hunger -= elapsedSec * 0.02;
-        state.happiness -= elapsedSec * 0.015;
-        state.stamina += elapsedSec * 0.01;
-        state.weight -= elapsedSec * 0.0018;
+        applyDelta(state, buildOfflineDelta(elapsedSec));
         clampState();
         state.lastStatus = `おるすばん中に ${Math.floor(elapsedSec / 6)} 秒ぶん すごした`;
       }
       state.lastTick = now;
+    }
+
+    function buildOfflineDelta(elapsedSec) {
+      return {
+        hunger: -(elapsedSec * 0.02),
+        happiness: -(elapsedSec * 0.015),
+        stamina: elapsedSec * 0.01,
+        weight: -(elapsedSec * 0.0018)
+      };
     }
 
     function bindEvents() {
@@ -1086,12 +1126,7 @@
         return;
       }
       state.fish -= item.cost;
-      state.hunger += item.hungerGain;
-      state.happiness += item.happinessGain;
-      state.bond += item.bondGain;
-      state.stamina += item.staminaGain;
-      state.growth += item.growthGain;
-      state.weight += item.weightGain;
+      applyDelta(state, buildFoodDelta(item));
       state.lastStatus = `${item.name} を 見つけて その場でもぐもぐ 食べた`;
       spawnFloatText(null, null, `+${item.name}`);
       setSealMode('eat', 2.2);
@@ -1100,7 +1135,7 @@
 
     function resolveToyAction(item) {
       if (state.stamina < item.minStamina) {
-        state.happiness += 2;
+        applyDelta(state, buildToyTiredDelta());
         state.lastStatus = `${item.name} は 気になるけれど、つかれていて 今日はのんびりしたいみたい`;
         spawnFloatText(null, null, 'つかれぎみ');
         setSealMode('sit', 1.8);
@@ -1111,16 +1146,37 @@
       const staminaFactor = item.playStyle === 'snuggle'
         ? 1
         : state.stamina < item.minStamina + 12 ? 0.75 : 1;
-      state.happiness += item.happinessGain * staminaFactor;
-      state.bond += item.bondGain * staminaFactor;
-      state.stamina -= item.staminaCost;
-      state.weight += item.weightDelta;
-      state.growth += item.growthGain;
-      state.hunger += item.hungerGain || 0;
+      applyDelta(state, buildToyDelta(item, staminaFactor));
       state.lastStatus = getToyResultStatus(item);
       spawnFloatText(null, null, getToyFloatText(item));
       setSealMode('idle', 1.6);
       finalizeResolvedAction();
+    }
+
+    function buildFoodDelta(item) {
+      return {
+        hunger: item.hungerGain,
+        happiness: item.happinessGain,
+        bond: item.bondGain,
+        stamina: item.staminaGain,
+        growth: item.growthGain,
+        weight: item.weightGain
+      };
+    }
+
+    function buildToyTiredDelta() {
+      return { happiness: 2 };
+    }
+
+    function buildToyDelta(item, staminaFactor) {
+      return {
+        happiness: item.happinessGain * staminaFactor,
+        bond: item.bondGain * staminaFactor,
+        stamina: -item.staminaCost,
+        weight: item.weightDelta,
+        growth: item.growthGain,
+        hunger: item.hungerGain || 0
+      };
     }
 
     function finalizeResolvedAction() {
@@ -1151,10 +1207,7 @@
 
     function petSeal(e) {
       if (pendingAction && !pendingAction.isPlaced) return;
-      state.happiness += 4;
-      state.bond += 2;
-      state.stamina -= 1;
-      state.growth += 1;
+      applyDelta(state, buildPetDelta());
       if (state.happiness > 80) state.fish += 2;
       state.lastStatus = randomFrom([
         'うれしそうに こちらを見ている',
@@ -1171,12 +1224,17 @@
       saveState();
     }
 
+    function buildPetDelta() {
+      return {
+        happiness: 4,
+        bond: 2,
+        stamina: -1,
+        growth: 1
+      };
+    }
+
     function startTraining() {
-      training.active = true;
-      training.taps = 0;
-      trainingBox.hidden = false;
-      trainingProgress.textContent = `0 / ${training.needed}`;
-      trainingTarget.textContent = '🐟';
+      resetTrainingSession();
       state.lastStatus = 'トレーニングを はじめた';
       render();
     }
@@ -1189,12 +1247,8 @@
       setTimeout(() => { trainingTarget.style.transform = ''; }, 90);
       if (training.taps >= training.needed) {
         training.active = false;
+        applyDelta(state, buildTrainingSuccessDelta());
         state.trainingCount += 1;
-        state.stamina += 10;
-        state.happiness += 6;
-        state.bond += 6;
-        state.growth += 4;
-        state.weight -= 0.8;
         state.lastStatus = 'トレーニング成功。ちょっと たくましく なった';
         updateStage();
         clampState();
@@ -1202,6 +1256,24 @@
         render();
         saveState();
       }
+    }
+
+    function resetTrainingSession() {
+      training.active = true;
+      training.taps = 0;
+      trainingBox.hidden = false;
+      trainingProgress.textContent = `0 / ${training.needed}`;
+      trainingTarget.textContent = '🐟';
+    }
+
+    function buildTrainingSuccessDelta() {
+      return {
+        stamina: 10,
+        happiness: 6,
+        bond: 6,
+        growth: 4,
+        weight: -0.8
+      };
     }
 
     function updateStage() {
@@ -1236,46 +1308,68 @@
     }
 
     function tickState(dt) {
-      state.hunger -= dt * 0.65;
-      state.happiness -= dt * 0.14;
-      state.stamina += dt * (seal.mode === 'sleep' ? 2.2 : 0.22);
-      state.weight -= dt * (seal.mode === 'walk' ? 0.01 : 0.003);
-      if (state.hunger < 28) state.happiness -= dt * 0.2;
-      if (state.happiness > 78) state.fish += dt * 0.7;
-      if (state.bond > 60 && Math.random() < dt * 0.08) state.fish += 1;
+      // 時間経過で減衰・自然回復する値をまとめて更新する。
+      applyDelta(state, buildPassiveStateDelta(dt));
+      applyPassiveStateBonuses(dt);
       clampState();
       updateTimeTheme();
     }
 
+    function buildPassiveStateDelta(dt) {
+      return {
+        hunger: -(dt * 0.65),
+        happiness: -(dt * 0.14),
+        stamina: dt * (seal.mode === 'sleep' ? 2.2 : 0.22),
+        weight: -(dt * (seal.mode === 'walk' ? 0.01 : 0.003))
+      };
+    }
+
+    function applyPassiveStateBonuses(dt) {
+      if (state.hunger < 28) state.happiness -= dt * 0.2;
+      if (state.happiness > 78) state.fish += dt * 0.7;
+      if (state.bond > 60 && Math.random() < dt * 0.08) state.fish += 1;
+    }
+
     function tickSeal(dt) {
+      // あざらし本体の移動・行動状態だけを更新する。
       seal.timer -= dt;
       seal.bob += dt * 4;
 
       if (seal.timer <= 0) chooseNextSealAction();
 
       if (seal.mode === 'walk') {
-        const chasingAction = Boolean(seal.actionTarget);
-        const dx = seal.targetX - seal.x;
-        const dy = seal.targetY - seal.y;
-        const distance = Math.hypot(dx, dy);
-        const facingSource = Math.abs(dx) > 0.5 ? dx : seal.facing;
-        seal.facing = Math.sign(facingSource) || 1;
-        const travel = seal.speed * getMoveSpeedScale(chasingAction) * dt;
-        if (distance <= travel || distance < 1) {
-          seal.x = seal.targetX;
-          seal.y = seal.targetY;
-          if (seal.actionTarget) {
-            resolvePendingAction();
-          } else {
-            setSealMode('idle', 1 + Math.random() * 2);
-          }
-        } else {
-          seal.x += (dx / distance) * travel;
-          seal.y += (dy / distance) * travel;
-        }
+        updateWalkingSeal(dt);
       }
 
       updateSealPosition();
+    }
+
+    function updateWalkingSeal(dt) {
+      const chasingAction = Boolean(seal.actionTarget);
+      const dx = seal.targetX - seal.x;
+      const dy = seal.targetY - seal.y;
+      const distance = Math.hypot(dx, dy);
+      const facingSource = Math.abs(dx) > 0.5 ? dx : seal.facing;
+      seal.facing = Math.sign(facingSource) || 1;
+
+      const travel = seal.speed * getMoveSpeedScale(chasingAction) * dt;
+      if (distance <= travel || distance < 1) {
+        settleSealAtDestination();
+        return;
+      }
+
+      seal.x += (dx / distance) * travel;
+      seal.y += (dy / distance) * travel;
+    }
+
+    function settleSealAtDestination() {
+      seal.x = seal.targetX;
+      seal.y = seal.targetY;
+      if (seal.actionTarget) {
+        resolvePendingAction();
+      } else {
+        setSealMode('idle', 1 + Math.random() * 2);
+      }
     }
 
     function chooseNextSealAction() {
