@@ -858,6 +858,7 @@
     };
 
     let pendingAction = null;
+    let placedAction = null;
 
     init();
 
@@ -985,9 +986,9 @@
       seal.targetX = seal.x;
       seal.targetY = seal.y;
       updateSealPosition();
-      if (pendingAction && pendingAction.isPlaced) {
-        pendingAction.x = clampActionX(pendingAction.x, area.width);
-        pendingAction.y = clampActionY(pendingAction.y, area.height);
+      if (placedAction) {
+        placedAction.x = clampActionX(placedAction.x, area.width);
+        placedAction.y = clampActionY(placedAction.y, area.height);
         updateActionDropPosition();
       }
     }
@@ -1027,7 +1028,7 @@
         const card = document.createElement('div');
         card.className = 'option-card';
         const canUse = canUseAction(kind, item);
-        const isSelected = pendingAction && pendingAction.kind === kind && pendingAction.index === index && !pendingAction.isPlaced;
+        const isSelected = pendingAction && pendingAction.kind === kind && pendingAction.index === index && !placedAction;
         const buttonLabel = isSelected ? 'えらび中' : kind === 'food' ? 'あげる' : 'あそぶ';
         const hint = kind === 'food'
           ? `必要なおさかな: ${item.cost} / 体重変化: +${item.weightGain.toFixed(1)}`
@@ -1058,11 +1059,9 @@
       pendingAction = {
         kind,
         index,
-        item,
-        isPlaced: false,
-        x: 0,
-        y: 0
+        item
       };
+      placedAction = null;
       playArea.dataset.dropLabel = kind === 'food'
         ? `${item.name} を落としたい場所をタップ`
         : getToyDropLabel(item);
@@ -1076,7 +1075,7 @@
     }
 
     function onPlayAreaClick(event) {
-      if (!pendingAction || pendingAction.isPlaced) return;
+      if (!pendingAction || placedAction) return;
       if (event.target.closest('.stats')) return;
       if (event.target.closest('.seal')) return;
 
@@ -1088,15 +1087,13 @@
 
     function placePendingActionAt(x, y) {
       if (!pendingAction) return;
-      pendingAction.x = x;
-      pendingAction.y = y;
-      pendingAction.isPlaced = true;
+      placedAction = { x, y };
       actionDrop.textContent = pendingAction.item.icon;
       actionDrop.dataset.label = pendingAction.item.name;
       actionDrop.classList.add('visible');
       updateActionDropPosition();
 
-      seal.actionTarget = { kind: pendingAction.kind, x, y, index: pendingAction.index };
+      seal.actionTarget = { x, y };
       seal.targetX = x;
       seal.targetY = y + 40;
       seal.facing = x < seal.x ? -1 : 1;
@@ -1108,48 +1105,145 @@
       saveState();
     }
 
+    /**
+     * pendingAction と placedAction を 1 つの解決用オブジェクトへ束ねる。
+     * input(UI 選択 + 配置座標) -> resolve 用 action
+     */
+    function getResolvedAction() {
+      if (!pendingAction || !placedAction) return null;
+      return {
+        kind: pendingAction.kind,
+        index: pendingAction.index,
+        item: pendingAction.item,
+        x: placedAction.x,
+        y: placedAction.y
+      };
+    }
+
+    /**
+     * 現在の state でアクション本体を完全適用できるか判定する。
+     * 不可時の代替演出は buildActionResult 側で扱う。
+     */
+    function canApplyAction(action, currentState) {
+      if (!action) return false;
+      if (action.kind === 'food') return currentState.fish >= action.item.cost;
+      return currentState.stamina >= action.item.minStamina;
+    }
+
+    /**
+     * action と state から純粋な数値変化のみを構築する。
+     * input -> delta
+     */
+    function buildActionDelta(action, currentState) {
+      if (!action) return {};
+      if (action.kind === 'food') {
+        if (!canApplyAction(action, currentState)) return {};
+        return {
+          fish: -action.item.cost,
+          ...buildFoodDelta(action.item)
+        };
+      }
+
+      if (!canApplyAction(action, currentState)) {
+        return buildToyTiredDelta();
+      }
+
+      const staminaFactor = action.item.playStyle === 'snuggle'
+        ? 1
+        : currentState.stamina < action.item.minStamina + 12 ? 0.75 : 1;
+      return buildToyDelta(action.item, staminaFactor);
+    }
+
+    /**
+     * action と state から UI/演出込みの結果オブジェクトを構築する。
+     * input -> delta + statusText + floatText + sealMode + duration
+     */
+    function buildActionResult(action, currentState) {
+      if (!action) return null;
+
+      if (action.kind === 'food' && !canApplyAction(action, currentState)) {
+        return {
+          delta: {},
+          statusText: 'おさかなが 足りなくて ごはんを 用意できなかった',
+          floatText: null,
+          sealMode: null,
+          duration: 0
+        };
+      }
+
+      if (action.kind === 'toy' && !canApplyAction(action, currentState)) {
+        return {
+          delta: buildActionDelta(action, currentState),
+          statusText: `${action.item.name} は 気になるけれど、つかれていて 今日はのんびりしたいみたい`,
+          floatText: 'つかれぎみ',
+          sealMode: 'sit',
+          duration: 1.8
+        };
+      }
+
+      return action.kind === 'food'
+        ? buildFoodActionResult(action, currentState)
+        : buildToyActionResult(action, currentState);
+    }
+
+    function buildFoodActionResult(action, currentState) {
+      return {
+        delta: buildActionDelta(action, currentState),
+        statusText: `${action.item.name} を 見つけて その場でもぐもぐ 食べた`,
+        floatText: `+${action.item.name}`,
+        sealMode: 'eat',
+        duration: 2.2
+      };
+    }
+
+    function buildToyActionResult(action, currentState) {
+      return {
+        delta: buildActionDelta(action, currentState),
+        statusText: getToyResultStatus(action.item),
+        floatText: getToyFloatText(action.item),
+        sealMode: 'idle',
+        duration: 1.6
+      };
+    }
+
+    /**
+     * result をまとめて反映する唯一の入口。
+     * delta -> state 更新 -> status/float/sealMode の順で適用する。
+     */
+    function applyResult(result) {
+      if (!result) return;
+      applyDelta(state, result.delta || {});
+      if (typeof result.statusText === 'string') state.lastStatus = result.statusText;
+      if (result.floatText) spawnFloatText(null, null, result.floatText);
+      if (result.sealMode) setSealMode(result.sealMode, result.duration);
+    }
+
     function resolvePendingAction() {
-      if (!pendingAction || !pendingAction.isPlaced || !seal.actionTarget) return;
+      const action = getResolvedAction();
+      if (!action || !seal.actionTarget) return;
       if (pendingAction.kind === 'food') {
-        resolveFoodAction(pendingAction.item);
+        resolveFoodAction(action);
       } else {
-        resolveToyAction(pendingAction.item);
+        resolveToyAction(action);
       }
     }
 
-    function resolveFoodAction(item) {
-      if (state.fish < item.cost) {
+    function resolveFoodAction(action) {
+      // 食事解決: result を構築して反映し、必要な後処理だけを行う。
+      if (!canApplyAction(action, state)) {
+        applyResult(buildActionResult(action, state));
         clearPendingAction();
-        state.lastStatus = 'おさかなが 足りなくて ごはんを 用意できなかった';
         renderFoodList();
         render();
         return;
       }
-      state.fish -= item.cost;
-      applyDelta(state, buildFoodDelta(item));
-      state.lastStatus = `${item.name} を 見つけて その場でもぐもぐ 食べた`;
-      spawnFloatText(null, null, `+${item.name}`);
-      setSealMode('eat', 2.2);
+      applyResult(buildActionResult(action, state));
       finalizeResolvedAction();
     }
 
-    function resolveToyAction(item) {
-      if (state.stamina < item.minStamina) {
-        applyDelta(state, buildToyTiredDelta());
-        state.lastStatus = `${item.name} は 気になるけれど、つかれていて 今日はのんびりしたいみたい`;
-        spawnFloatText(null, null, 'つかれぎみ');
-        setSealMode('sit', 1.8);
-        finalizeResolvedAction();
-        return;
-      }
-
-      const staminaFactor = item.playStyle === 'snuggle'
-        ? 1
-        : state.stamina < item.minStamina + 12 ? 0.75 : 1;
-      applyDelta(state, buildToyDelta(item, staminaFactor));
-      state.lastStatus = getToyResultStatus(item);
-      spawnFloatText(null, null, getToyFloatText(item));
-      setSealMode('idle', 1.6);
+    function resolveToyAction(action) {
+      // 遊び解決: 成否や疲労分岐も buildActionResult 側に寄せる。
+      applyResult(buildActionResult(action, state));
       finalizeResolvedAction();
     }
 
@@ -1180,6 +1274,7 @@
     }
 
     function finalizeResolvedAction() {
+      // 解決後の共通後処理。将来、食事/遊びの共通 cleanup を追加する入口。
       state.weight = clamp(state.weight, 16, 80);
       updateStage();
       clampState();
@@ -1192,6 +1287,7 @@
 
     function clearPendingAction() {
       pendingAction = null;
+      placedAction = null;
       seal.actionTarget = null;
       actionDrop.classList.remove('visible');
       actionDrop.dataset.label = '';
@@ -1200,13 +1296,13 @@
     }
 
     function updateActionDropPosition() {
-      if (!pendingAction || !pendingAction.isPlaced) return;
-      actionDrop.style.left = `${pendingAction.x - 32}px`;
-      actionDrop.style.top = `${pendingAction.y - 32}px`;
+      if (!pendingAction || !placedAction) return;
+      actionDrop.style.left = `${placedAction.x - 32}px`;
+      actionDrop.style.top = `${placedAction.y - 32}px`;
     }
 
     function petSeal(e) {
-      if (pendingAction && !pendingAction.isPlaced) return;
+      if (pendingAction && !placedAction) return;
       applyDelta(state, buildPetDelta());
       if (state.happiness > 80) state.fish += 2;
       state.lastStatus = randomFrom([
@@ -1481,7 +1577,7 @@
       bondValue.textContent = Math.floor(state.bond);
       weightValue.textContent = state.weight.toFixed(1);
       timeBadge.style.display = state.showTime ? 'block' : 'none';
-      playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !pendingAction.isPlaced));
+      playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !placedAction));
     }
 
     function spawnFloatText(clientX, clientY, text) {
