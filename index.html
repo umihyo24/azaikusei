@@ -730,6 +730,7 @@
         name: 'やわらかボール',
         icon: '⚽',
         desc: '置いた場所までダッシュ。あそぶとごきげんとなかよしが上がる。',
+        playStyle: 'chase',
         staminaCost: 10,
         minStamina: 18,
         happinessGain: 11,
@@ -737,6 +738,46 @@
         weightDelta: -1.2,
         growthGain: 2,
         baseSpeedBoost: 1.65
+      },
+      {
+        name: 'すべるパック',
+        icon: '🥏',
+        desc: '氷の上をシャーッと追いかける。運動量が大きい。',
+        playStyle: 'glide',
+        staminaCost: 15,
+        minStamina: 28,
+        happinessGain: 15,
+        bondGain: 6,
+        weightDelta: -2,
+        growthGain: 3,
+        baseSpeedBoost: 1.95
+      },
+      {
+        name: 'ふれあいブイ',
+        icon: '🛟',
+        desc: 'ぷかぷか浮かぶお気に入り。体力が少ない日でも遊びやすい。',
+        playStyle: 'snuggle',
+        staminaCost: 5,
+        minStamina: 10,
+        happinessGain: 8,
+        bondGain: 11,
+        weightDelta: -0.4,
+        growthGain: 1,
+        baseSpeedBoost: 1.15
+      },
+      {
+        name: 'おやつ入りボール',
+        icon: '🎾',
+        desc: '追いかけたあとに小さなおやつも楽しめる、欲ばりおもちゃ。',
+        playStyle: 'reward',
+        staminaCost: 8,
+        minStamina: 16,
+        happinessGain: 13,
+        bondGain: 8,
+        weightDelta: 0.3,
+        growthGain: 2,
+        hungerGain: 6,
+        baseSpeedBoost: 1.5
       }
     ];
 
@@ -950,7 +991,7 @@
         const buttonLabel = isSelected ? 'えらび中' : kind === 'food' ? 'あげる' : 'あそぶ';
         const hint = kind === 'food'
           ? `必要なおさかな: ${item.cost} / 体重変化: +${item.weightGain.toFixed(1)}`
-          : `必要たいりょく: ${item.minStamina} / 体重変化: ${item.weightDelta}`;
+          : `必要たいりょく: ${item.minStamina} / 体重変化: ${item.weightDelta} / ${getToyStyleLabel(item.playStyle)}`;
         card.innerHTML = `
           <div>
             <h4>${item.icon} ${item.name}</h4>
@@ -984,10 +1025,10 @@
       };
       playArea.dataset.dropLabel = kind === 'food'
         ? `${item.name} を落としたい場所をタップ`
-        : `${item.name} を転がしたい場所をタップ`;
+        : getToyDropLabel(item);
       state.lastStatus = kind === 'food'
         ? `${item.name} を どこに落とすか 選んでいる`
-        : `${item.name} を どこで遊ぶか 選んでいる`;
+        : getToyReadyStatus(item);
       renderFoodList();
       renderToyList();
       closePanels();
@@ -1022,7 +1063,7 @@
       setSealMode('walk', pendingAction.kind === 'toy' ? 7 : 6);
       state.lastStatus = pendingAction.kind === 'food'
         ? `${pendingAction.item.name} を 見つけて てくてく 向かっている`
-        : `${pendingAction.item.name} を 見つけて はりきって 走りだした`;
+        : getToyChaseStatus(pendingAction.item);
       render();
       saveState();
     }
@@ -1060,21 +1101,24 @@
     function resolveToyAction(item) {
       if (state.stamina < item.minStamina) {
         state.happiness += 2;
-        state.lastStatus = 'ボールは気になるけれど、つかれていて 今日はのんびりしたいみたい';
+        state.lastStatus = `${item.name} は 気になるけれど、つかれていて 今日はのんびりしたいみたい`;
         spawnFloatText(null, null, 'つかれぎみ');
         setSealMode('sit', 1.8);
         finalizeResolvedAction();
         return;
       }
 
-      const staminaFactor = state.stamina < item.minStamina + 12 ? 0.75 : 1;
+      const staminaFactor = item.playStyle === 'snuggle'
+        ? 1
+        : state.stamina < item.minStamina + 12 ? 0.75 : 1;
       state.happiness += item.happinessGain * staminaFactor;
       state.bond += item.bondGain * staminaFactor;
       state.stamina -= item.staminaCost;
       state.weight += item.weightDelta;
       state.growth += item.growthGain;
-      state.lastStatus = `${item.name} で 元気いっぱい あそんだ`;
-      spawnFloatText(null, null, '+ごきげん');
+      state.hunger += item.hungerGain || 0;
+      state.lastStatus = getToyResultStatus(item);
+      spawnFloatText(null, null, getToyFloatText(item));
       setSealMode('idle', 1.6);
       finalizeResolvedAction();
     }
@@ -1372,7 +1416,68 @@
     function getToySpeedMultiplier() {
       const personality = PERSONALITY_PRESETS[state.personality] || PERSONALITY_PRESETS.playful;
       const trainingBonus = Math.min(0.3, state.trainingCount * 0.03);
-      return toyItems[pendingAction.index].baseSpeedBoost + personality.toySpeedBonus + trainingBonus;
+      const playStyleBonus = {
+        chase: 0,
+        glide: 0.18,
+        snuggle: -0.15,
+        reward: 0.08
+      };
+      const styleBonus = playStyleBonus[pendingAction.item.playStyle] || 0;
+      return toyItems[pendingAction.index].baseSpeedBoost + personality.toySpeedBonus + trainingBonus + styleBonus;
+    }
+
+    function getToyStyleLabel(playStyle) {
+      return ({
+        chase: '追いかけ',
+        glide: 'すべりあそび',
+        snuggle: 'ふれあい',
+        reward: 'ごほうび付き'
+      })[playStyle] || 'あそび';
+    }
+
+    function getToyDropLabel(item) {
+      return ({
+        chase: `${item.name} を転がしたい場所をタップ`,
+        glide: `${item.name} をすべらせたい場所をタップ`,
+        snuggle: `${item.name} を置きたい場所をタップ`,
+        reward: `${item.name} を投げたい場所をタップ`
+      })[item.playStyle] || `${item.name} を置きたい場所をタップ`;
+    }
+
+    function getToyReadyStatus(item) {
+      return ({
+        chase: `${item.name} を どこで遊ぶか 選んでいる`,
+        glide: `${item.name} ですべるコースを 選んでいる`,
+        snuggle: `${item.name} で のんびり遊ぶ場所を 選んでいる`,
+        reward: `${item.name} を どこへ投げるか 考えている`
+      })[item.playStyle] || `${item.name} を どこで遊ぶか 選んでいる`;
+    }
+
+    function getToyChaseStatus(item) {
+      return ({
+        chase: `${item.name} を 見つけて はりきって 走りだした`,
+        glide: `${item.name} を 目がけて つるっと すべりだした`,
+        snuggle: `${item.name} に ゆっくり 近づいている`,
+        reward: `${item.name} の ごほうびを 楽しみに 追いかけている`
+      })[item.playStyle] || `${item.name} を 見つけて はりきって 走りだした`;
+    }
+
+    function getToyResultStatus(item) {
+      return ({
+        chase: `${item.name} で 元気いっぱい あそんだ`,
+        glide: `${item.name} で 氷の上を すいすい すべった`,
+        snuggle: `${item.name} と いっしょに まったり すごした`,
+        reward: `${item.name} で あそんで ちいさな ごほうびも もらった`
+      })[item.playStyle] || `${item.name} で 元気いっぱい あそんだ`;
+    }
+
+    function getToyFloatText(item) {
+      return ({
+        chase: '+ごきげん',
+        glide: '+エクササイズ',
+        snuggle: '+なかよし',
+        reward: '+ごほうび'
+      })[item.playStyle] || '+ごきげん';
     }
 
     function getStageLabel() {
