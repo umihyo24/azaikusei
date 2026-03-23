@@ -734,6 +734,7 @@
       x: 0,
       y: 0,
       targetX: 0,
+      targetY: 0,
       mode: 'idle',
       timer: 0,
       speed: 32,
@@ -848,6 +849,7 @@
       seal.x = Math.max(area.width * 0.74, 420);
       seal.y = area.height * 0.78;
       seal.targetX = seal.x;
+      seal.targetY = seal.y;
       updateSealPosition();
       if (pendingFood && pendingFood.isPlaced) {
         const maxX = Math.max(120, area.width - 48);
@@ -934,6 +936,7 @@
 
       seal.foodTarget = { x, y, index: pendingFood.index };
       seal.targetX = x;
+      seal.targetY = y + 40;
       seal.facing = x < seal.x ? -1 : 1;
       setSealMode('walk', 6);
       state.lastStatus = `${pendingFood.item.name} を 見つけて てくてく 向かっている`;
@@ -1076,21 +1079,25 @@
       if (seal.timer <= 0) chooseNextSealAction();
 
       if (seal.mode === 'walk') {
-        const dx = seal.targetX - seal.x;
-        const dir = Math.sign(dx) || 1;
-        seal.facing = dir;
         const chasingFood = Boolean(seal.foodTarget);
+        const dx = seal.targetX - seal.x;
+        const dy = seal.targetY - seal.y;
+        const distance = Math.hypot(dx, dy);
+        const facingSource = Math.abs(dx) > 0.5 ? dx : seal.facing;
+        seal.facing = Math.sign(facingSource) || 1;
         const speedScale = chasingFood ? 1.45 : state.hunger < 25 ? 0.55 : state.happiness > 70 ? 1.2 : 1;
-        const move = dir * seal.speed * speedScale * dt;
-        if (Math.abs(dx) <= Math.abs(move)) {
+        const travel = seal.speed * speedScale * dt;
+        if (distance <= travel || distance < 1) {
           seal.x = seal.targetX;
+          seal.y = seal.targetY;
           if (seal.foodTarget) {
             resolveFoodArrival();
           } else {
             setSealMode('idle', 1 + Math.random() * 2);
           }
         } else {
-          seal.x += move;
+          seal.x += (dx / distance) * travel;
+          seal.y += (dy / distance) * travel;
         }
       }
 
@@ -1100,6 +1107,7 @@
     function chooseNextSealAction() {
       if (seal.foodTarget) {
         seal.targetX = seal.foodTarget.x;
+        seal.targetY = seal.foodTarget.y + 40;
         setSealMode('walk', 4);
         state.lastStatus = `${pendingFood.item.name} に まっすぐ 向かっている`;
         return;
@@ -1129,6 +1137,7 @@
 
       if (lively && roll < 0.6) {
         seal.targetX = randomSealX();
+        seal.targetY = seal.y;
         setSealMode('walk', 2 + Math.random() * 3);
         state.lastStatus = randomFrom([
           'のそのそ 歩きまわっている',
@@ -1147,6 +1156,7 @@
         ]);
       } else {
         seal.targetX = randomSealX();
+        seal.targetY = seal.y;
         setSealMode('walk', 2 + Math.random() * 3);
         state.lastStatus = 'てくてく 歩いている';
       }
