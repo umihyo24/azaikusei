@@ -104,7 +104,7 @@
     }
 
     .play-area.is-drop-mode::after {
-      content: "エサを落としたい場所をタップ";
+      content: attr(data-drop-label);
       position: absolute;
       right: 18px;
       bottom: 18px;
@@ -181,6 +181,7 @@
     .bar-happy span { background: #ff9dbe; }
     .bar-stamina span { background: #8fdc8f; }
     .bar-bond span { background: #b49bff; }
+    .bar-weight span { background: #f6b26b; }
 
     .seal {
       position: absolute;
@@ -288,7 +289,7 @@
       right: 18px;
       bottom: 18px;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
       z-index: 4;
     }
@@ -350,7 +351,7 @@
       cursor: pointer;
     }
 
-    .food-list, .training-list {
+    .food-list, .toy-list, .training-list {
       display: grid;
       gap: 10px;
     }
@@ -559,10 +560,15 @@
           <div class="bar bar-bond"><span id="bondBar"></span></div>
           <strong id="bondValue">20</strong>
         </div>
+        <div class="stat-row">
+          <span>たいじゅう</span>
+          <div class="bar bar-weight"><span id="weightBar"></span></div>
+          <strong id="weightValue">38</strong>
+        </div>
       </div>
 
       <div class="seal-shadow" id="sealShadow"></div>
-      <div class="food-drop" id="foodDrop" aria-hidden="true">🐟</div>
+      <div class="food-drop" id="actionDrop" aria-hidden="true">🐟</div>
       <button class="seal" id="sealButton" aria-label="あざらしをなでる">
         <img src="seal.png" alt="あざらし" />
       </button>
@@ -570,6 +576,7 @@
 
     <div class="bottom-nav">
       <button class="nav-btn" data-panel="food">ごはん 🍚</button>
+      <button class="nav-btn" data-panel="toy">おもちゃ ⚽</button>
       <button class="nav-btn" data-panel="training">トレーニング</button>
       <button class="nav-btn" data-panel="settings">せってい</button>
     </div>
@@ -581,6 +588,16 @@
           <button class="close-btn" data-close>×</button>
         </div>
         <div class="food-list" id="foodList"></div>
+      </div>
+    </div>
+
+    <div class="panel-backdrop" id="toyPanel">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>おもちゃ</h3>
+          <button class="close-btn" data-close>×</button>
+        </div>
+        <div class="toy-list" id="toyList"></div>
       </div>
     </div>
 
@@ -644,7 +661,13 @@
   </div>
 
   <script>
-    const SAVE_KEY = 'seal-game-save-v1';
+    const SAVE_KEY = 'seal-game-save-v2';
+
+    const PERSONALITY_PRESETS = {
+      playful: { label: 'あそび好き', toySpeedBonus: 0.24, toyMoodBonus: 1.2 },
+      calm: { label: 'おだやか', toySpeedBonus: 0.08, toyMoodBonus: 0.9 },
+      earnest: { label: 'がんばりや', toySpeedBonus: 0.16, toyMoodBonus: 1.05 }
+    };
 
     const defaultState = () => ({
       fish: 30,
@@ -652,8 +675,11 @@
       happiness: 72,
       stamina: 68,
       bond: 20,
+      weight: 38,
       growth: 0,
       stage: 0,
+      trainingCount: 0,
+      personality: 'playful',
       volume: 70,
       showTime: true,
       lastTick: Date.now(),
@@ -665,46 +691,66 @@
         name: 'こざかな',
         icon: '🐟',
         cost: 5,
-        desc: 'まんぷくをしっかり回復。気軽にあげやすい基本ごはん。',
-        apply(state) {
-          state.hunger += 18;
-          state.happiness += 4;
-          state.growth += 4;
-        }
+        desc: 'まんぷくをしっかり回復。体重は少しだけ増えやすい。',
+        hungerGain: 18,
+        happinessGain: 4,
+        bondGain: 0,
+        staminaGain: 0,
+        growthGain: 4,
+        weightGain: 1.2
       },
       {
         name: 'エビのおやつ',
         icon: '🦐',
         cost: 10,
-        desc: 'ごきげん重視。少しぜいたくで、なかよし度も上がりやすい。',
-        apply(state) {
-          state.hunger += 10;
-          state.happiness += 12;
-          state.bond += 5;
-          state.growth += 3;
-        }
+        desc: 'ごきげん重視。なかよし度も上がるが、体重増加は控えめ。',
+        hungerGain: 10,
+        happinessGain: 12,
+        bondGain: 5,
+        staminaGain: 0,
+        growthGain: 3,
+        weightGain: 0.8
       },
       {
         name: 'ごほうびプレート',
         icon: '🍣',
         cost: 18,
-        desc: 'たいりょくも回復する特別メニュー。成長にも少し効く。',
-        apply(state) {
-          state.hunger += 20;
-          state.happiness += 8;
-          state.stamina += 12;
-          state.bond += 3;
-          state.growth += 7;
-        }
+        desc: '特別メニュー。回復も成長も大きいぶん、体重も増えやすい。',
+        hungerGain: 20,
+        happinessGain: 8,
+        bondGain: 3,
+        staminaGain: 12,
+        growthGain: 7,
+        weightGain: 2.4
       }
     ];
 
-    const stageNames = ['あかちゃん', 'こども', 'おとな', 'ごきげん名人'];
-    const stageThresholds = [0, 25, 60, 110];
+    const toyItems = [
+      {
+        name: 'やわらかボール',
+        icon: '⚽',
+        desc: '置いた場所までダッシュ。あそぶとごきげんとなかよしが上がる。',
+        staminaCost: 10,
+        minStamina: 18,
+        happinessGain: 11,
+        bondGain: 7,
+        weightDelta: -1.2,
+        growthGain: 2,
+        baseSpeedBoost: 1.65
+      }
+    ];
+
+    const stageThresholds = [
+      { growth: 0, minWeight: 20 },
+      { growth: 25, minWeight: 28 },
+      { growth: 60, minWeight: 34 },
+      { growth: 110, minWeight: 40 }
+    ];
+
     const playArea = document.getElementById('playArea');
     const sealButton = document.getElementById('sealButton');
     const sealShadow = document.getElementById('sealShadow');
-    const foodDrop = document.getElementById('foodDrop');
+    const actionDrop = document.getElementById('actionDrop');
     const fishValue = document.getElementById('fishValue');
     const stageValue = document.getElementById('stageValue');
     const statusBubble = document.getElementById('statusBubble');
@@ -713,14 +759,18 @@
     const happyBar = document.getElementById('happyBar');
     const staminaBar = document.getElementById('staminaBar');
     const bondBar = document.getElementById('bondBar');
+    const weightBar = document.getElementById('weightBar');
     const hungerValue = document.getElementById('hungerValue');
     const happyValue = document.getElementById('happyValue');
     const staminaValue = document.getElementById('staminaValue');
     const bondValue = document.getElementById('bondValue');
+    const weightValue = document.getElementById('weightValue');
     const foodPanel = document.getElementById('foodPanel');
+    const toyPanel = document.getElementById('toyPanel');
     const trainingPanel = document.getElementById('trainingPanel');
     const settingsPanel = document.getElementById('settingsPanel');
     const foodList = document.getElementById('foodList');
+    const toyList = document.getElementById('toyList');
     const startTrainingBtn = document.getElementById('startTrainingBtn');
     const trainingBox = document.getElementById('trainingBox');
     const trainingTarget = document.getElementById('trainingTarget');
@@ -740,7 +790,7 @@
       speed: 32,
       facing: 1,
       bob: 0,
-      foodTarget: null
+      actionTarget: null
     };
 
     let training = {
@@ -749,13 +799,14 @@
       needed: 5
     };
 
-    let pendingFood = null;
+    let pendingAction = null;
 
     init();
 
     function init() {
       placeSealInitially();
       renderFoodList();
+      renderToyList();
       bindEvents();
       applyOfflineProgress();
       updateStage();
@@ -786,6 +837,7 @@
         state.hunger -= elapsedSec * 0.02;
         state.happiness -= elapsedSec * 0.015;
         state.stamina += elapsedSec * 0.01;
+        state.weight -= elapsedSec * 0.0018;
         clampState();
         state.lastStatus = `おるすばん中に ${Math.floor(elapsedSec / 6)} 秒ぶん すごした`;
       }
@@ -793,15 +845,15 @@
     }
 
     function bindEvents() {
-      document.querySelectorAll('.nav-btn').forEach(btn => {
+      document.querySelectorAll('.nav-btn').forEach((btn) => {
         btn.addEventListener('click', () => openPanel(btn.dataset.panel));
       });
 
-      document.querySelectorAll('[data-close]').forEach(btn => {
+      document.querySelectorAll('[data-close]').forEach((btn) => {
         btn.addEventListener('click', closePanels);
       });
 
-      [foodPanel, trainingPanel, settingsPanel].forEach(panel => {
+      [foodPanel, toyPanel, trainingPanel, settingsPanel].forEach((panel) => {
         panel.addEventListener('click', (e) => {
           if (e.target === panel) closePanels();
         });
@@ -832,10 +884,11 @@
         state = defaultState();
         training = { active: false, taps: 0, needed: 5 };
         trainingBox.hidden = true;
-        clearPendingFood();
+        clearPendingAction();
         closePanels();
         placeSealInitially();
         renderFoodList();
+        renderToyList();
         render();
         saveState();
       });
@@ -851,11 +904,10 @@
       seal.targetX = seal.x;
       seal.targetY = seal.y;
       updateSealPosition();
-      if (pendingFood && pendingFood.isPlaced) {
-        const maxX = Math.max(120, area.width - 48);
-        pendingFood.x = clamp(pendingFood.x, 240, maxX);
-        pendingFood.y = clamp(pendingFood.y, 32, area.height - 42);
-        updateFoodDropPosition();
+      if (pendingAction && pendingAction.isPlaced) {
+        pendingAction.x = clampActionX(pendingAction.x, area.width);
+        pendingAction.y = clampActionY(pendingAction.y, area.height);
+        updateActionDropPosition();
       }
     }
 
@@ -865,125 +917,196 @@
         renderFoodList();
         foodPanel.classList.add('open');
       }
+      if (name === 'toy') {
+        renderToyList();
+        toyPanel.classList.add('open');
+      }
       if (name === 'training') trainingPanel.classList.add('open');
       if (name === 'settings') settingsPanel.classList.add('open');
     }
 
     function closePanels() {
       foodPanel.classList.remove('open');
+      toyPanel.classList.remove('open');
       trainingPanel.classList.remove('open');
       settingsPanel.classList.remove('open');
     }
 
     function renderFoodList() {
-      foodList.innerHTML = '';
-      foodItems.forEach((item, index) => {
+      renderActionList(foodList, foodItems, 'food');
+    }
+
+    function renderToyList() {
+      renderActionList(toyList, toyItems, 'toy');
+    }
+
+    function renderActionList(container, items, kind) {
+      container.innerHTML = '';
+      items.forEach((item, index) => {
         const card = document.createElement('div');
         card.className = 'option-card';
-        const canBuy = state.fish >= item.cost;
-        const isSelected = pendingFood && pendingFood.index === index && !pendingFood.isPlaced;
+        const canUse = canUseAction(kind, item);
+        const isSelected = pendingAction && pendingAction.kind === kind && pendingAction.index === index && !pendingAction.isPlaced;
+        const buttonLabel = isSelected ? 'えらび中' : kind === 'food' ? 'あげる' : 'あそぶ';
+        const hint = kind === 'food'
+          ? `必要なおさかな: ${item.cost} / 体重変化: +${item.weightGain.toFixed(1)}`
+          : `必要たいりょく: ${item.minStamina} / 体重変化: ${item.weightDelta}`;
         card.innerHTML = `
           <div>
             <h4>${item.icon} ${item.name}</h4>
-            <p>${item.desc}<br>必要なおさかな: ${item.cost}</p>
+            <p>${item.desc}<br>${hint}</p>
           </div>
-          <button class="action-btn" ${canBuy ? '' : 'disabled'} data-food-index="${index}">${isSelected ? 'えらび中' : 'あげる'}</button>
+          <button class="action-btn" ${canUse ? '' : 'disabled'} data-action-kind="${kind}" data-action-index="${index}">${buttonLabel}</button>
         `;
-        foodList.appendChild(card);
+        container.appendChild(card);
       });
 
-      foodList.querySelectorAll('[data-food-index]').forEach(btn => {
-        btn.addEventListener('click', () => prepareFoodDrop(Number(btn.dataset.foodIndex)));
+      container.querySelectorAll('[data-action-kind]').forEach((btn) => {
+        btn.addEventListener('click', () => prepareActionPlacement(btn.dataset.actionKind, Number(btn.dataset.actionIndex)));
       });
     }
 
-    function prepareFoodDrop(index) {
-      const item = foodItems[index];
-      if (state.fish < item.cost) return;
-      pendingFood = {
+    function canUseAction(kind, item) {
+      if (kind === 'food') return state.fish >= item.cost;
+      return state.stamina >= Math.max(8, item.minStamina - 8);
+    }
+
+    function prepareActionPlacement(kind, index) {
+      const item = kind === 'food' ? foodItems[index] : toyItems[index];
+      if (!item || !canUseAction(kind, item)) return;
+      pendingAction = {
+        kind,
         index,
         item,
         isPlaced: false,
         x: 0,
         y: 0
       };
-      state.lastStatus = `${item.name} を どこに落とすか 選んでいる`;
+      playArea.dataset.dropLabel = kind === 'food'
+        ? `${item.name} を落としたい場所をタップ`
+        : `${item.name} を転がしたい場所をタップ`;
+      state.lastStatus = kind === 'food'
+        ? `${item.name} を どこに落とすか 選んでいる`
+        : `${item.name} を どこで遊ぶか 選んでいる`;
       renderFoodList();
+      renderToyList();
       closePanels();
       render();
     }
 
     function onPlayAreaClick(event) {
-      if (!pendingFood || pendingFood.isPlaced) return;
+      if (!pendingAction || pendingAction.isPlaced) return;
       if (event.target.closest('.stats')) return;
       if (event.target.closest('.seal')) return;
 
       const rect = playArea.getBoundingClientRect();
-      const dropX = clamp(event.clientX - rect.left, 240, rect.width - 48);
-      const dropY = clamp(event.clientY - rect.top, 34, rect.height - 42);
-      placeFoodAt(dropX, dropY);
+      const x = clampActionX(event.clientX - rect.left, rect.width);
+      const y = clampActionY(event.clientY - rect.top, rect.height);
+      placePendingActionAt(x, y);
     }
 
-    function placeFoodAt(x, y) {
-      if (!pendingFood) return;
-      pendingFood.x = x;
-      pendingFood.y = y;
-      pendingFood.isPlaced = true;
-      foodDrop.textContent = pendingFood.item.icon;
-      foodDrop.dataset.label = pendingFood.item.name;
-      foodDrop.classList.add('visible');
-      updateFoodDropPosition();
+    function placePendingActionAt(x, y) {
+      if (!pendingAction) return;
+      pendingAction.x = x;
+      pendingAction.y = y;
+      pendingAction.isPlaced = true;
+      actionDrop.textContent = pendingAction.item.icon;
+      actionDrop.dataset.label = pendingAction.item.name;
+      actionDrop.classList.add('visible');
+      updateActionDropPosition();
 
-      seal.foodTarget = { x, y, index: pendingFood.index };
+      seal.actionTarget = { kind: pendingAction.kind, x, y, index: pendingAction.index };
       seal.targetX = x;
       seal.targetY = y + 40;
       seal.facing = x < seal.x ? -1 : 1;
-      setSealMode('walk', 6);
-      state.lastStatus = `${pendingFood.item.name} を 見つけて てくてく 向かっている`;
+      setSealMode('walk', pendingAction.kind === 'toy' ? 7 : 6);
+      state.lastStatus = pendingAction.kind === 'food'
+        ? `${pendingAction.item.name} を 見つけて てくてく 向かっている`
+        : `${pendingAction.item.name} を 見つけて はりきって 走りだした`;
       render();
       saveState();
     }
 
-    function resolveFoodArrival() {
-      if (!pendingFood || !pendingFood.isPlaced || !seal.foodTarget) return;
-      const item = pendingFood.item;
+    function resolvePendingAction() {
+      if (!pendingAction || !pendingAction.isPlaced || !seal.actionTarget) return;
+      if (pendingAction.kind === 'food') {
+        resolveFoodAction(pendingAction.item);
+      } else {
+        resolveToyAction(pendingAction.item);
+      }
+    }
+
+    function resolveFoodAction(item) {
       if (state.fish < item.cost) {
-        clearPendingFood();
+        clearPendingAction();
         state.lastStatus = 'おさかなが 足りなくて ごはんを 用意できなかった';
         renderFoodList();
         render();
         return;
       }
-
       state.fish -= item.cost;
-      item.apply(state);
+      state.hunger += item.hungerGain;
+      state.happiness += item.happinessGain;
+      state.bond += item.bondGain;
+      state.stamina += item.staminaGain;
+      state.growth += item.growthGain;
+      state.weight += item.weightGain;
       state.lastStatus = `${item.name} を 見つけて その場でもぐもぐ 食べた`;
       spawnFloatText(null, null, `+${item.name}`);
       setSealMode('eat', 2.2);
+      finalizeResolvedAction();
+    }
+
+    function resolveToyAction(item) {
+      if (state.stamina < item.minStamina) {
+        state.happiness += 2;
+        state.lastStatus = 'ボールは気になるけれど、つかれていて 今日はのんびりしたいみたい';
+        spawnFloatText(null, null, 'つかれぎみ');
+        setSealMode('sit', 1.8);
+        finalizeResolvedAction();
+        return;
+      }
+
+      const staminaFactor = state.stamina < item.minStamina + 12 ? 0.75 : 1;
+      state.happiness += item.happinessGain * staminaFactor;
+      state.bond += item.bondGain * staminaFactor;
+      state.stamina -= item.staminaCost;
+      state.weight += item.weightDelta;
+      state.growth += item.growthGain;
+      state.lastStatus = `${item.name} で 元気いっぱい あそんだ`;
+      spawnFloatText(null, null, '+ごきげん');
+      setSealMode('idle', 1.6);
+      finalizeResolvedAction();
+    }
+
+    function finalizeResolvedAction() {
+      state.weight = clamp(state.weight, 16, 80);
       updateStage();
       clampState();
-      clearPendingFood();
+      clearPendingAction();
       renderFoodList();
+      renderToyList();
       render();
       saveState();
     }
 
-    function clearPendingFood() {
-      pendingFood = null;
-      seal.foodTarget = null;
-      foodDrop.classList.remove('visible');
-      foodDrop.dataset.label = '';
+    function clearPendingAction() {
+      pendingAction = null;
+      seal.actionTarget = null;
+      actionDrop.classList.remove('visible');
+      actionDrop.dataset.label = '';
       playArea.classList.remove('is-drop-mode');
+      playArea.dataset.dropLabel = '';
     }
 
-    function updateFoodDropPosition() {
-      if (!pendingFood || !pendingFood.isPlaced) return;
-      foodDrop.style.left = `${pendingFood.x - 32}px`;
-      foodDrop.style.top = `${pendingFood.y - 32}px`;
+    function updateActionDropPosition() {
+      if (!pendingAction || !pendingAction.isPlaced) return;
+      actionDrop.style.left = `${pendingAction.x - 32}px`;
+      actionDrop.style.top = `${pendingAction.y - 32}px`;
     }
 
     function petSeal(e) {
-      if (pendingFood && !pendingFood.isPlaced) return;
+      if (pendingAction && !pendingAction.isPlaced) return;
       state.happiness += 4;
       state.bond += 2;
       state.stamina -= 1;
@@ -1022,10 +1145,12 @@
       setTimeout(() => { trainingTarget.style.transform = ''; }, 90);
       if (training.taps >= training.needed) {
         training.active = false;
+        state.trainingCount += 1;
         state.stamina += 10;
         state.happiness += 6;
         state.bond += 6;
         state.growth += 4;
+        state.weight -= 0.8;
         state.lastStatus = 'トレーニング成功。ちょっと たくましく なった';
         updateStage();
         clampState();
@@ -1038,7 +1163,10 @@
     function updateStage() {
       let nextStage = 0;
       for (let i = 0; i < stageThresholds.length; i += 1) {
-        if (state.growth >= stageThresholds[i]) nextStage = i;
+        const threshold = stageThresholds[i];
+        if (state.growth >= threshold.growth && state.weight >= threshold.minWeight) {
+          nextStage = i;
+        }
       }
       state.stage = nextStage;
     }
@@ -1048,7 +1176,9 @@
       state.happiness = clamp(state.happiness, 0, 100);
       state.stamina = clamp(state.stamina, 0, 100);
       state.bond = clamp(state.bond, 0, 100);
+      state.weight = clamp(state.weight, 16, 80);
       state.fish = Math.max(0, Math.floor(state.fish));
+      state.trainingCount = Math.max(0, Math.floor(state.trainingCount));
     }
 
     let lastTime = performance.now();
@@ -1065,6 +1195,7 @@
       state.hunger -= dt * 0.65;
       state.happiness -= dt * 0.14;
       state.stamina += dt * (seal.mode === 'sleep' ? 2.2 : 0.22);
+      state.weight -= dt * (seal.mode === 'walk' ? 0.01 : 0.003);
       if (state.hunger < 28) state.happiness -= dt * 0.2;
       if (state.happiness > 78) state.fish += dt * 0.7;
       if (state.bond > 60 && Math.random() < dt * 0.08) state.fish += 1;
@@ -1079,19 +1210,18 @@
       if (seal.timer <= 0) chooseNextSealAction();
 
       if (seal.mode === 'walk') {
-        const chasingFood = Boolean(seal.foodTarget);
+        const chasingAction = Boolean(seal.actionTarget);
         const dx = seal.targetX - seal.x;
         const dy = seal.targetY - seal.y;
         const distance = Math.hypot(dx, dy);
         const facingSource = Math.abs(dx) > 0.5 ? dx : seal.facing;
         seal.facing = Math.sign(facingSource) || 1;
-        const speedScale = chasingFood ? 1.45 : state.hunger < 25 ? 0.55 : state.happiness > 70 ? 1.2 : 1;
-        const travel = seal.speed * speedScale * dt;
+        const travel = seal.speed * getMoveSpeedScale(chasingAction) * dt;
         if (distance <= travel || distance < 1) {
           seal.x = seal.targetX;
           seal.y = seal.targetY;
-          if (seal.foodTarget) {
-            resolveFoodArrival();
+          if (seal.actionTarget) {
+            resolvePendingAction();
           } else {
             setSealMode('idle', 1 + Math.random() * 2);
           }
@@ -1105,11 +1235,13 @@
     }
 
     function chooseNextSealAction() {
-      if (seal.foodTarget) {
-        seal.targetX = seal.foodTarget.x;
-        seal.targetY = seal.foodTarget.y + 40;
-        setSealMode('walk', 4);
-        state.lastStatus = `${pendingFood.item.name} に まっすぐ 向かっている`;
+      if (seal.actionTarget && pendingAction) {
+        seal.targetX = seal.actionTarget.x;
+        seal.targetY = seal.actionTarget.y + 40;
+        setSealMode('walk', pendingAction.kind === 'toy' ? 4.8 : 4);
+        state.lastStatus = pendingAction.kind === 'toy'
+          ? `${pendingAction.item.name} を 追いかけて ダッシュしている`
+          : `${pendingAction.item.name} に まっすぐ 向かっている`;
         return;
       }
 
@@ -1198,18 +1330,20 @@
 
     function render() {
       fishValue.textContent = Math.floor(state.fish);
-      stageValue.textContent = stageNames[state.stage];
+      stageValue.textContent = getStageLabel();
       statusBubble.textContent = state.lastStatus;
       hungerBar.style.width = `${state.hunger}%`;
       happyBar.style.width = `${state.happiness}%`;
       staminaBar.style.width = `${state.stamina}%`;
       bondBar.style.width = `${state.bond}%`;
+      weightBar.style.width = `${mapWeightToPercent(state.weight)}%`;
       hungerValue.textContent = Math.floor(state.hunger);
       happyValue.textContent = Math.floor(state.happiness);
       staminaValue.textContent = Math.floor(state.stamina);
       bondValue.textContent = Math.floor(state.bond);
+      weightValue.textContent = state.weight.toFixed(1);
       timeBadge.style.display = state.showTime ? 'block' : 'none';
-      playArea.classList.toggle('is-drop-mode', Boolean(pendingFood && !pendingFood.isPlaced));
+      playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !pendingAction.isPlaced));
     }
 
     function spawnFloatText(clientX, clientY, text) {
@@ -1225,6 +1359,51 @@
       setTimeout(() => el.remove(), 1000);
     }
 
+    function getMoveSpeedScale(chasingAction) {
+      if (!chasingAction) {
+        return state.hunger < 25 ? 0.55 : state.happiness > 70 ? 1.2 : 1;
+      }
+      if (!pendingAction || pendingAction.kind !== 'toy') {
+        return 1.45;
+      }
+      return getToySpeedMultiplier();
+    }
+
+    function getToySpeedMultiplier() {
+      const personality = PERSONALITY_PRESETS[state.personality] || PERSONALITY_PRESETS.playful;
+      const trainingBonus = Math.min(0.3, state.trainingCount * 0.03);
+      return toyItems[pendingAction.index].baseSpeedBoost + personality.toySpeedBonus + trainingBonus;
+    }
+
+    function getStageLabel() {
+      const weightBand = getWeightBand();
+      const stageLabels = [
+        { light: 'あかちゃん', normal: 'あかちゃん', heavy: 'あかちゃん' },
+        { light: 'すばしっこいこども', normal: 'こども', heavy: 'もちもちこども' },
+        { light: 'しなやかおとな', normal: 'おとな', heavy: 'もっちりおとな' },
+        { light: 'スリム名人', normal: 'ごきげん名人', heavy: 'もっちり名人' }
+      ];
+      return stageLabels[state.stage][weightBand];
+    }
+
+    function getWeightBand() {
+      if (state.weight < 32) return 'light';
+      if (state.weight > 52) return 'heavy';
+      return 'normal';
+    }
+
+    function mapWeightToPercent(weight) {
+      return ((weight - 16) / (80 - 16)) * 100;
+    }
+
+    function clampActionX(value, width) {
+      return clamp(value, 240, width - 48);
+    }
+
+    function clampActionY(value, height) {
+      return clamp(value, 34, height - 42);
+    }
+
     function clamp(value, min, max) {
       return Math.min(max, Math.max(min, value));
     }
@@ -1233,5 +1412,6 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
   </script>
+
 </body>
 </html>
