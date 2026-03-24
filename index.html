@@ -1321,7 +1321,7 @@
       bottom: 18px;
       z-index: 2;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: flex-end;
       gap: 12px;
       flex-wrap: wrap;
@@ -1735,7 +1735,7 @@
           </div>
           <div class="option-card">
             <div>
-              <h4>ホイ</h4>
+              <h4>あっちむいてホイ</h4>
               <p>専用画面で起動するミニゲーム（現在メンテ中）。</p>
             </div>
             <button class="action-btn" id="startLookAwayTrainingBtn">開始</button>
@@ -1864,6 +1864,7 @@
         <p id="trainingResultSummary">結果を表示します。</p>
         <p id="trainingRewardSummary">能力反映はありません。</p>
         <div class="minigame-actions">
+          <button class="curling-retry-btn" id="trainingResultRetryBtn" type="button">リトライ</button>
           <button class="action-btn" id="trainingResultBackBtn" type="button">メインへ戻る</button>
         </div>
       </div>
@@ -2126,6 +2127,7 @@
     const trainingResultTitle = document.getElementById('trainingResultTitle');
     const trainingResultSummary = document.getElementById('trainingResultSummary');
     const trainingRewardSummary = document.getElementById('trainingRewardSummary');
+    const trainingResultRetryBtn = document.getElementById('trainingResultRetryBtn');
     const trainingResultBackBtn = document.getElementById('trainingResultBackBtn');
     const curlingSheet = document.getElementById('curlingSheet');
     const curlingHouse = document.getElementById('curlingHouse');
@@ -2368,6 +2370,7 @@
       closeLookAwayBtn.addEventListener('click', cancelMinigame);
       lookAwayBackBtn.addEventListener('click', cancelMinigame);
       trainingResultBackBtn.addEventListener('click', onTrainingResultBack);
+      trainingResultRetryBtn.addEventListener('click', retryCurrentMinigame);
       curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
       bindCurlingControls();
@@ -2651,6 +2654,16 @@
       hideTrainingResult();
       gameMode = 'main';
       render();
+    }
+
+    function retryCurrentMinigame() {
+      const gameId = trainingResultState?.result?.gameId;
+      if (!gameId) return;
+      if (gameId === 'curling') stopCurling();
+      if (gameId === 'iceSlide') stopIceSlideMode();
+      if (gameId === 'lookAway') stopLookAwayMode();
+      hideTrainingResult();
+      startMinigame(gameId);
     }
 
     function getGameLabel(gameId) {
@@ -2975,23 +2988,6 @@
         el.style.top = `${target.y}px`;
         el.style.opacity = idx === 0 ? '0.95' : idx === 1 ? '0.9' : '0.88';
         el.style.borderColor = idx === 0 ? 'rgba(59,130,246,0.45)' : idx === 1 ? 'rgba(14,165,233,0.48)' : 'rgba(244,63,94,0.5)';
-
-        const label = document.createElement('div');
-        label.textContent = target.label;
-        label.style.position = 'absolute';
-        label.style.left = `${target.x + target.radius * 0.45}px`;
-        label.style.top = `${target.y - target.radius * 0.45}px`;
-        label.style.transform = 'translate(-50%, -50%)';
-        label.style.fontSize = '12px';
-        label.style.fontWeight = '700';
-        label.style.color = '#31577a';
-        label.style.background = 'rgba(255,255,255,0.92)';
-        label.style.border = '2px solid #cfe6fb';
-        label.style.borderRadius = '999px';
-        label.style.padding = '3px 8px';
-        label.style.zIndex = '7';
-        curlingSheet.appendChild(label);
-        curlingState.targetLabelElements.push(label);
       });
     }
 
@@ -3101,9 +3097,10 @@
       let best = 0;
       curlingState.targetRings.forEach((target) => {
         const distance = Math.hypot(x - target.x, y - target.y);
-        if (distance <= target.radius) {
-          best = Math.max(best, target.score);
-        }
+        if (distance > target.radius) return;
+        const ratio = distance / target.radius;
+        const score = ratio <= 0.24 ? 100 : ratio <= 0.56 ? 60 : 30;
+        best = Math.max(best, score);
       });
       return best;
     }
@@ -3265,8 +3262,8 @@
       if (curlingPowerText) curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
       curlingScoreValue.textContent = String(curlingState.score);
       curlingStatusText.textContent = 'あざらしストーンを引っぱって、はなしてショット\nわっかの中心に近いほど高得点';
-      curlingResultText.textContent = curlingState.resultText;
-      curlingResultCard.classList.toggle('visible', curlingState.shotTaken || curlingState.hasScore);
+      if (curlingResultText) curlingResultText.textContent = '';
+      if (curlingResultCard) curlingResultCard.classList.remove('visible');
       renderCurlingStoneDots();
 
       curlingState.placedStones.forEach((stone, index) => {
