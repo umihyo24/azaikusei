@@ -362,7 +362,7 @@
       right: 18px;
       bottom: 18px;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       z-index: 4;
     }
@@ -804,6 +804,217 @@
       filter: drop-shadow(0 14px 14px rgba(30, 41, 59, 0.16));
     }
 
+    .sparring-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: linear-gradient(180deg, rgba(227, 241, 255, 0.98) 0%, rgba(243, 249, 255, 0.98) 100%);
+      z-index: 11;
+      overflow: hidden;
+    }
+
+    .sparring-overlay.open {
+      display: block;
+    }
+
+    .sparring-header {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      z-index: 2;
+    }
+
+    .sparring-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .sparring-badge,
+    .sparring-action {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      border: 2px solid #cfe0f3;
+      color: #31577a;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .sparring-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .sparring-action {
+      border-radius: 14px;
+      cursor: pointer;
+    }
+
+    .sparring-arena {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .sparring-arena::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 72px;
+      bottom: 22px;
+      border: 3px solid rgba(79, 143, 196, 0.22);
+      border-radius: 32px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0) 26%),
+        linear-gradient(180deg, rgba(162, 205, 240, 0.18) 0%, rgba(255,255,255,0) 100%);
+      pointer-events: none;
+    }
+
+    .sparring-enemy {
+      position: absolute;
+      left: 0;
+      top: 92px;
+      width: 118px;
+      height: 78px;
+      border-radius: 28px 28px 22px 22px;
+      background: linear-gradient(180deg, #ffb4c8 0%, #ff8fb1 100%);
+      border: 3px solid #1f2937;
+      box-shadow: 0 12px 20px rgba(244, 114, 182, 0.18);
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+    .sparring-enemy::before,
+    .sparring-enemy::after {
+      content: "";
+      position: absolute;
+      top: 20px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1f2937;
+    }
+
+    .sparring-enemy::before { left: 28px; }
+    .sparring-enemy::after { right: 28px; }
+
+    .sparring-enemy-glove {
+      position: absolute;
+      top: 22px;
+      width: 30px;
+      height: 30px;
+      border-radius: 14px;
+      background: #1f2937;
+    }
+
+    .sparring-enemy-glove.left { left: -12px; }
+    .sparring-enemy-glove.right { right: -12px; }
+
+    .sparring-player {
+      position: absolute;
+      bottom: 34px;
+      width: 126px;
+      transform: translateX(-50%);
+      z-index: 2;
+      user-select: none;
+      pointer-events: none;
+      transition: left 0.05s linear;
+    }
+
+    .sparring-player img {
+      width: 100%;
+      display: block;
+      filter: drop-shadow(0 14px 14px rgba(30, 41, 59, 0.16));
+    }
+
+    .sparring-shadow {
+      position: absolute;
+      bottom: 30px;
+      width: 100px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(71, 85, 105, 0.16);
+      filter: blur(2px);
+      transform: translateX(-50%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .sparring-attack {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      border: 3px solid #1f2937;
+      background: linear-gradient(180deg, #ffd166 0%, #f97316 100%);
+      transform: translateX(-50%);
+      box-shadow: 0 12px 20px rgba(249, 115, 22, 0.2);
+      z-index: 3;
+    }
+
+    .sparring-attack.object {
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fff7ed 0%, #fb923c 45%, #ea580c 100%);
+    }
+
+    .sparring-hit-flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(248, 113, 113, 0.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+      z-index: 4;
+    }
+
+    .sparring-hit-flash.visible {
+      opacity: 1;
+    }
+
+    .sparring-message {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(84%, 360px);
+      padding: 18px 20px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.94);
+      border: 3px solid #d8e7f5;
+      text-align: center;
+      color: #31577a;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+      z-index: 5;
+    }
+
+    .sparring-message h3 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    .sparring-message p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .game-shell.sparring-mode .stats,
+    .game-shell.sparring-mode #sealButton,
+    .game-shell.sparring-mode #sealShadow,
+    .game-shell.sparring-mode #actionDrop {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
     .night .game-shell,
     .night .game-shell .top-wave {
       transition: background 0.35s ease;
@@ -958,6 +1169,7 @@
       <button class="nav-btn" data-panel="food">ごはん 🍚</button>
       <button class="nav-btn" data-panel="toy">おもちゃ ⚽</button>
       <button class="nav-btn" data-panel="training">トレーニング</button>
+      <button class="nav-btn" id="startSparringBtn">スパーリング</button>
       <button class="nav-btn" data-panel="settings">せってい</button>
     </div>
 
@@ -1054,6 +1266,35 @@
       <div class="ice-slide-arena" id="iceSlideArena">
         <div class="ice-slide-seal" id="iceSlideSeal" aria-hidden="true">
           <img src="seal.png" alt="" />
+        </div>
+      </div>
+    </div>
+
+    <div class="sparring-overlay" id="sparringOverlay">
+      <div class="sparring-header">
+        <div class="sparring-badges">
+          <div class="sparring-badge" id="sparringTimeBadge">のこり 20.0秒</div>
+          <div class="sparring-badge" id="sparringScoreBadge">スコア 0</div>
+          <div class="sparring-badge" id="sparringStreakBadge">コンボ 0</div>
+        </div>
+        <div class="sparring-actions">
+          <button class="sparring-action" id="restartSparringBtn">やりなおす</button>
+          <button class="sparring-action" id="closeSparringBtn">もどる</button>
+        </div>
+      </div>
+      <div class="sparring-arena" id="sparringArena" aria-label="スパーリングミニゲーム">
+        <div class="sparring-enemy" id="sparringEnemy" aria-hidden="true">
+          <div class="sparring-enemy-glove left"></div>
+          <div class="sparring-enemy-glove right"></div>
+        </div>
+        <div class="sparring-hit-flash" id="sparringHitFlash"></div>
+        <div class="sparring-shadow" id="sparringShadow"></div>
+        <div class="sparring-player" id="sparringPlayer" aria-hidden="true">
+          <img src="seal.png" alt="" />
+        </div>
+        <div class="sparring-message" id="sparringMessage" hidden>
+          <h3 id="sparringMessageTitle">スパーリング</h3>
+          <p id="sparringMessageText">左右によけて 20秒 生きのころう。</p>
         </div>
       </div>
     </div>
@@ -1240,6 +1481,7 @@
       { growth: 110, minWeight: 40 }
     ];
 
+    const gameShell = document.getElementById('gameShell');
     const playArea = document.getElementById('playArea');
     const sealButton = document.getElementById('sealButton');
     const sealShadow = document.getElementById('sealShadow');
@@ -1278,19 +1520,21 @@
     const iceSlideArena = document.getElementById('iceSlideArena');
     const iceSlideSeal = document.getElementById('iceSlideSeal');
     const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
-    const modeToggleBtn = document.getElementById('modeToggleBtn');
-    const minigameOverlay = document.getElementById('minigameOverlay');
-    const minigameScore = document.getElementById('minigameScore');
-    const minigameTime = document.getElementById('minigameTime');
-    const minigameResultText = document.getElementById('minigameResultText');
-    const minigameFish = document.getElementById('minigameFish');
-    const minigameArea = document.getElementById('minigameArea');
-    const minigameStartScreen = document.getElementById('minigameStartScreen');
-    const minigameResult = document.getElementById('minigameResult');
-    const minigameStartBtn = document.getElementById('minigameStartBtn');
-    const minigameRetryBtn = document.getElementById('minigameRetryBtn');
-    const minigameBackBtn = document.getElementById('minigameBackBtn');
-    const minigameResultBackBtn = document.getElementById('minigameResultBackBtn');
+    const startSparringBtn = document.getElementById('startSparringBtn');
+    const sparringOverlay = document.getElementById('sparringOverlay');
+    const sparringArena = document.getElementById('sparringArena');
+    const sparringEnemy = document.getElementById('sparringEnemy');
+    const sparringPlayer = document.getElementById('sparringPlayer');
+    const sparringShadow = document.getElementById('sparringShadow');
+    const sparringHitFlash = document.getElementById('sparringHitFlash');
+    const sparringTimeBadge = document.getElementById('sparringTimeBadge');
+    const sparringScoreBadge = document.getElementById('sparringScoreBadge');
+    const sparringStreakBadge = document.getElementById('sparringStreakBadge');
+    const sparringMessage = document.getElementById('sparringMessage');
+    const sparringMessageTitle = document.getElementById('sparringMessageTitle');
+    const sparringMessageText = document.getElementById('sparringMessageText');
+    const restartSparringBtn = document.getElementById('restartSparringBtn');
+    const closeSparringBtn = document.getElementById('closeSparringBtn');
 
     const ICE_SLIDE_CONFIG = {
       initialSpeed: 180,
@@ -1302,7 +1546,23 @@
       debugLogInterval: 0.35
     };
 
+    const SPARRING_CONFIG = {
+      duration: 20,
+      playerSpeed: 340,
+      playerWidth: 96,
+      playerHitHeight: 38,
+      lanePadding: 48,
+      spawnIntervalMin: 0.26,
+      spawnIntervalMax: 0.72,
+      attackBaseSpeed: 180,
+      attackSpeedRamp: 12,
+      attackSize: 40,
+      dodgeScorePerSecond: 12,
+      dodgeBonus: 6
+    };
+
     let state = loadState();
+    let gameMode = 'main';
     let seal = {
       x: 0,
       y: 0,
@@ -1327,6 +1587,9 @@
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
+    let sparringInput = 0;
+    let sparringPointerX = null;
+    let sparringState = createSparringState();
     let pendingAction = null;
     let placedAction = null;
     const minigame = window.createMinigameModule({
@@ -1350,8 +1613,10 @@
       bindEvents();
       applyOfflineProgress();
       updateStage();
+      initializeSparringLayout();
       render();
       window.startIceSlideMode = startIceSlideMode;
+      window.startSparringMode = startSparringMode;
       requestAnimationFrame(loop);
       setInterval(saveState, 5000);
     }
@@ -1434,7 +1699,7 @@
     }
 
     function bindEvents() {
-      document.querySelectorAll('.nav-btn').forEach((btn) => {
+      document.querySelectorAll('.nav-btn[data-panel]').forEach((btn) => {
         btn.addEventListener('click', () => openPanel(btn.dataset.panel));
       });
 
@@ -1460,13 +1725,11 @@
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
       collectedDropBtn.addEventListener('click', dropCollectedItem);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
-      modeToggleBtn.addEventListener('click', toggleGameMode);
-      minigameStartBtn.addEventListener('click', startMinigameSession);
-      minigameRetryBtn.addEventListener('click', startMinigameSession);
-      minigameBackBtn.addEventListener('click', switchToMainMode);
-      minigameResultBackBtn.addEventListener('click', switchToMainMode);
-      minigameFish.addEventListener('click', onMinigameFishClick);
+      startSparringBtn.addEventListener('click', startSparringMode);
+      restartSparringBtn.addEventListener('click', restartSparring);
+      closeSparringBtn.addEventListener('click', stopSparringMode);
       bindIceSlideControls();
+      bindSparringControls();
 
       timeToggle.checked = state.showTime;
       volumeSlider.value = state.volume;
@@ -1490,10 +1753,12 @@
         gameMode = 'main';
         minigameState = minigame.createState();
         stopIceSlideMode();
+        stopSparringMode({ keepStatus: true });
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
         placeSealInitially();
+        initializeSparringLayout();
         renderFoodList();
         renderToyList();
         render();
@@ -1501,7 +1766,10 @@
       });
 
       window.addEventListener('beforeunload', saveState);
-      window.addEventListener('resize', placeSealInitially);
+      window.addEventListener('resize', () => {
+        placeSealInitially();
+        initializeSparringLayout();
+      });
     }
 
     function createIceSlideState() {
@@ -1540,6 +1808,59 @@
       window.addEventListener('mouseup', onIceSlideMouseUp);
     }
 
+    function createSparringState() {
+      return {
+        active: true,
+        playerX: 0,
+        enemyX: 0,
+        attacks: [],
+        score: 0,
+        time: SPARRING_CONFIG.duration,
+        moveDir: 0,
+        spawnTimer: 0.52,
+        elapsed: 0,
+        combo: 0,
+        result: null,
+        hitFlash: 0
+      };
+    }
+
+    function bindSparringControls() {
+      window.addEventListener('keydown', onSparringKeyDown);
+      window.addEventListener('keyup', onSparringKeyUp);
+      sparringArena.addEventListener('pointerdown', onSparringPointerMove);
+      sparringArena.addEventListener('pointermove', onSparringPointerMove);
+      sparringArena.addEventListener('pointerleave', () => {
+        sparringPointerX = null;
+      });
+    }
+
+    function onSparringKeyDown(event) {
+      if (gameMode !== 'sparring') return;
+      if (event.key === 'ArrowLeft') {
+        sparringInput = -1;
+        event.preventDefault();
+      }
+      if (event.key === 'ArrowRight') {
+        sparringInput = 1;
+        event.preventDefault();
+      }
+    }
+
+    function onSparringKeyUp(event) {
+      if (gameMode !== 'sparring') return;
+      if ((event.key === 'ArrowLeft' && sparringInput === -1) || (event.key === 'ArrowRight' && sparringInput === 1)) {
+        sparringInput = 0;
+        event.preventDefault();
+      }
+    }
+
+    function onSparringPointerMove(event) {
+      if (gameMode !== 'sparring') return;
+      const rect = sparringArena.getBoundingClientRect();
+      sparringPointerX = clamp(event.clientX - rect.left, SPARRING_CONFIG.lanePadding, rect.width - SPARRING_CONFIG.lanePadding);
+    }
+
     function onIceSlideKeyDown(event) {
       if (!iceSlideMode) return;
       if (event.key === 'ArrowLeft') {
@@ -1576,6 +1897,8 @@
 
     function startIceSlideMode() {
       closePanels();
+      stopSparringMode({ keepStatus: true });
+      gameMode = 'iceSlide';
       iceSlideMode = true;
       iceSlideInput = 0;
       initializeIceSlideState();
@@ -1584,9 +1907,40 @@
     }
 
     function stopIceSlideMode() {
+      if (gameMode === 'iceSlide') gameMode = 'main';
       iceSlideMode = false;
       iceSlideInput = 0;
       iceSlideOverlay.classList.remove('open');
+    }
+
+    function startSparringMode() {
+      closePanels();
+      stopIceSlideMode();
+      clearPendingAction();
+      gameMode = 'sparring';
+      sparringInput = 0;
+      sparringPointerX = null;
+      sparringOverlay.classList.add('open');
+      gameShell.classList.add('sparring-mode');
+      initializeSparringState();
+      renderSparring();
+      render();
+    }
+
+    function stopSparringMode(options = {}) {
+      if (gameMode === 'sparring') gameMode = 'main';
+      sparringInput = 0;
+      sparringPointerX = null;
+      sparringOverlay.classList.remove('open');
+      gameShell.classList.remove('sparring-mode');
+      render();
+    }
+
+    function restartSparring() {
+      if (gameMode !== 'sparring') return;
+      initializeSparringState();
+      renderSparring();
+      render();
     }
 
     function initializeIceSlideState() {
@@ -1612,6 +1966,25 @@
         placedAction.y = clampActionY(placedAction.y, area.height);
         updateActionDropPosition();
       }
+    }
+
+    function initializeSparringLayout() {
+      const rect = playArea.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      if (sparringState.playerX <= 0) sparringState.playerX = rect.width * 0.5;
+      if (sparringState.enemyX <= 0) sparringState.enemyX = rect.width * 0.5;
+      sparringState.playerX = clamp(sparringState.playerX, SPARRING_CONFIG.lanePadding, rect.width - SPARRING_CONFIG.lanePadding);
+      sparringState.enemyX = clamp(sparringState.enemyX, SPARRING_CONFIG.lanePadding, rect.width - SPARRING_CONFIG.lanePadding);
+      renderSparring();
+    }
+
+    function initializeSparringState() {
+      const rect = playArea.getBoundingClientRect();
+      sparringState = createSparringState();
+      sparringState.playerX = rect.width * 0.5;
+      sparringState.enemyX = rect.width * 0.5;
+      sparringState.spawnTimer = 0.4;
+      renderSparringMessage('スパーリング', '左右キーかクリックで よけよう。20秒 生きのこればクリア。');
     }
 
     function openPanel(name) {
@@ -1701,6 +2074,7 @@
     }
 
     function onPlayAreaClick(event) {
+      if (gameMode !== 'main') return;
       if (!pendingAction || placedAction) return;
       if (event.target.closest('.stats')) return;
       if (event.target.closest('.seal')) return;
@@ -2163,17 +2537,13 @@
         requestAnimationFrame(loop);
         return;
       }
-      if (gameMode === 'minigame') {
-        updateMinigame(dt);
-        renderMinigame();
-      } else {
-        updateMain(dt);
-        renderMain();
+      if (gameMode === 'sparring') {
+        updateSparring(dt);
+        renderSparring();
+        render();
+        requestAnimationFrame(loop);
+        return;
       }
-      requestAnimationFrame(loop);
-    }
-
-    function updateMain(dt) {
       tickState(dt);
       tickSeal(dt);
     }
@@ -2188,6 +2558,150 @@
       } else {
         renderMain();
       }
+    }
+
+    function updateSparring(dt) {
+      if (!sparringState.active) {
+        sparringState.hitFlash = Math.max(0, sparringState.hitFlash - dt);
+        return;
+      }
+
+      const arenaRect = sparringArena.getBoundingClientRect();
+      const minX = SPARRING_CONFIG.lanePadding;
+      const maxX = arenaRect.width - SPARRING_CONFIG.lanePadding;
+
+      sparringState.time = Math.max(0, sparringState.time - dt);
+      sparringState.elapsed += dt;
+      sparringState.score += dt * SPARRING_CONFIG.dodgeScorePerSecond;
+
+      if (sparringPointerX !== null) {
+        const delta = sparringPointerX - sparringState.playerX;
+        const step = Math.sign(delta) * Math.min(Math.abs(delta), SPARRING_CONFIG.playerSpeed * dt * 1.2);
+        sparringState.playerX += step;
+      } else {
+        sparringState.playerX += sparringInput * SPARRING_CONFIG.playerSpeed * dt;
+      }
+      sparringState.playerX = clamp(sparringState.playerX, minX, maxX);
+
+      sparringState.enemyX += Math.sin(sparringState.elapsed * 1.8) * 72 * dt;
+      sparringState.enemyX = clamp(sparringState.enemyX, minX, maxX);
+
+      sparringState.spawnTimer -= dt;
+      if (sparringState.spawnTimer <= 0) {
+        spawnSparringAttack(arenaRect);
+      }
+
+      updateSparringAttacks(dt, arenaRect);
+      sparringState.hitFlash = Math.max(0, sparringState.hitFlash - dt);
+
+      if (sparringState.time <= 0) {
+        finishSparring('clear');
+      }
+    }
+
+    function spawnSparringAttack(arenaRect) {
+      const progress = 1 - (sparringState.time / SPARRING_CONFIG.duration);
+      const speed = SPARRING_CONFIG.attackBaseSpeed + progress * 170 + sparringState.elapsed * SPARRING_CONFIG.attackSpeedRamp;
+      const targetBias = (Math.random() - 0.5) * 160;
+      const attackX = clamp(sparringState.playerX + targetBias, SPARRING_CONFIG.lanePadding, arenaRect.width - SPARRING_CONFIG.lanePadding);
+      sparringState.attacks.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+        x: attackX,
+        y: 126,
+        size: SPARRING_CONFIG.attackSize + Math.random() * 10,
+        speed,
+        type: Math.random() < 0.5 ? 'punch' : 'object',
+        dodged: false
+      });
+      sparringState.spawnTimer = randomBetween(
+        Math.max(0.18, SPARRING_CONFIG.spawnIntervalMin - progress * 0.12),
+        Math.max(0.3, SPARRING_CONFIG.spawnIntervalMax - progress * 0.16)
+      );
+    }
+
+    function updateSparringAttacks(dt, arenaRect) {
+      const playerY = arenaRect.height - 92;
+      const dodgeLine = playerY + 24;
+      const halfWidth = SPARRING_CONFIG.playerWidth * 0.42;
+      const hitTop = playerY - SPARRING_CONFIG.playerHitHeight;
+      const hitBottom = playerY + 16;
+
+      sparringState.attacks = sparringState.attacks.filter((attack) => {
+        attack.y += attack.speed * dt;
+
+        const overlapX = Math.abs(attack.x - sparringState.playerX) < halfWidth;
+        const attackTop = attack.y - attack.size * 0.5;
+        const attackBottom = attack.y + attack.size * 0.5;
+        const overlapY = attackBottom >= hitTop && attackTop <= hitBottom;
+
+        if (overlapX && overlapY) {
+          finishSparring('hit');
+          return false;
+        }
+
+        if (!attack.dodged && attack.y >= dodgeLine) {
+          attack.dodged = true;
+          sparringState.combo += 1;
+          sparringState.score += SPARRING_CONFIG.dodgeBonus + Math.min(18, sparringState.combo * 1.5);
+        }
+
+        return attack.y < arenaRect.height + 80;
+      });
+    }
+
+    function finishSparring(result) {
+      sparringState.active = false;
+      sparringState.result = result;
+      sparringState.time = Math.max(0, sparringState.time);
+      sparringState.score = Math.round(sparringState.score);
+      if (result === 'hit') {
+        sparringState.combo = 0;
+        sparringState.hitFlash = 0.35;
+        renderSparringMessage('ヒット！', `スコア ${sparringState.score}。やりなおして もっと長く よけてみよう。`);
+      } else {
+        renderSparringMessage('クリア！', `20秒 完走。スコア ${sparringState.score} で 回避成功！`);
+      }
+    }
+
+    function renderSparring() {
+      const rect = playArea.getBoundingClientRect();
+      sparringOverlay.classList.toggle('open', gameMode === 'sparring');
+      sparringEnemy.style.left = `${sparringState.enemyX}px`;
+      sparringPlayer.style.left = `${sparringState.playerX}px`;
+      sparringShadow.style.left = `${sparringState.playerX}px`;
+      sparringTimeBadge.textContent = `のこり ${sparringState.time.toFixed(1)}秒`;
+      sparringScoreBadge.textContent = `スコア ${Math.round(sparringState.score)}`;
+      sparringStreakBadge.textContent = `コンボ ${sparringState.combo}`;
+      sparringHitFlash.classList.toggle('visible', sparringState.hitFlash > 0);
+
+      sparringArena.querySelectorAll('.sparring-attack').forEach((node) => node.remove());
+      sparringState.attacks.forEach((attack) => {
+        const el = document.createElement('div');
+        el.className = `sparring-attack${attack.type === 'object' ? ' object' : ''}`;
+        el.style.left = `${attack.x}px`;
+        el.style.top = `${attack.y - attack.size * 0.5}px`;
+        el.style.width = `${attack.size}px`;
+        el.style.height = `${attack.size}px`;
+        sparringArena.appendChild(el);
+      });
+
+      if (sparringState.active) {
+        if (sparringState.elapsed < 1.4) {
+          sparringMessage.hidden = false;
+          sparringMessageTitle.textContent = 'スパーリング';
+          sparringMessageText.textContent = '左右キーかクリックで移動。落下攻撃をよけ続けよう。';
+        } else {
+          sparringMessage.hidden = true;
+        }
+      }
+
+      if (!rect.width) return;
+    }
+
+    function renderSparringMessage(title, text) {
+      sparringMessage.hidden = false;
+      sparringMessageTitle.textContent = title;
+      sparringMessageText.textContent = text;
     }
 
     function updateIceSlide(dt) {
@@ -2504,11 +3018,11 @@
       timeBadge.textContent = isNight ? 'よる' : 'ひる';
     }
 
-    function renderMain() {
+    function render() {
+      gameShell.classList.toggle('sparring-mode', gameMode === 'sparring');
       fishValue.textContent = Math.floor(state.fish);
       stageValue.textContent = getStageLabel();
-      statusBubble.textContent = state.lastStatus;
-      moodBadge.textContent = `調子：${getMood(state)}`;
+      statusBubble.textContent = getCurrentStatusText();
       hungerBar.style.width = `${state.hunger}%`;
       happyBar.style.width = `${state.happiness}%`;
       staminaBar.style.width = `${state.stamina}%`;
@@ -2520,34 +3034,7 @@
       bondValue.textContent = Math.floor(state.bond);
       weightValue.textContent = state.weight.toFixed(1);
       timeBadge.style.display = state.showTime ? 'block' : 'none';
-      collectedSummary.textContent = `🐟${state.collectedItems.fish} / 🐚${state.collectedItems.shell}`;
-      collectedDropBtn.disabled = !getAvailableCollectedItems().length || Boolean(pendingAction);
-      playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !placedAction));
-      renderMinigame();
-    }
-
-    function renderMinigame() {
-      minigame.render(minigameState, gameMode === 'minigame');
-      const isMain = gameMode === 'main';
-      minigameOverlay.setAttribute('aria-hidden', String(isMain));
-      modeToggleBtn.textContent = isMain ? 'ミニゲームへ' : 'メインへ';
-      statusBubble.style.display = isMain ? 'block' : 'none';
-      timeBadge.style.display = isMain && state.showTime ? 'block' : 'none';
-      sealButton.style.display = isMain ? 'block' : 'none';
-      sealShadow.style.display = isMain ? 'block' : 'none';
-      actionDrop.style.display = isMain && actionDrop.classList.contains('visible') ? 'grid' : 'none';
-      playArea.classList.toggle('is-drop-mode', isMain && Boolean(pendingAction && !placedAction));
-    }
-
-    function renderLogs() {
-      const recentLogs = state.logs.slice(-VISIBLE_LOGS).reverse();
-      if (!recentLogs.length) {
-        logList.innerHTML = '<li>まだログはありません</li>';
-        return;
-      }
-      logList.innerHTML = recentLogs
-        .map((entry) => `<li>${entry.text}</li>`)
-        .join('');
+      playArea.classList.toggle('is-drop-mode', gameMode === 'main' && Boolean(pendingAction && !placedAction));
     }
 
     function spawnFloatText(clientX, clientY, text) {
@@ -2700,40 +3187,19 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function toggleGameMode() {
-      if (gameMode === 'main') {
-        switchToMinigameMode();
-      } else {
-        switchToMainMode();
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function getCurrentStatusText() {
+      if (gameMode !== 'sparring') return state.lastStatus;
+      if (!sparringState.active && sparringState.result === 'hit') {
+        return '攻撃を見きれず ヒット。もう一回 よけてみよう';
       }
-    }
-
-    function switchToMinigameMode() {
-      closePanels();
-      stopIceSlideMode();
-      clearPendingAction();
-      trainingBox.hidden = true;
-      training.active = false;
-      gameMode = 'minigame';
-      if (!minigameState) minigameState = minigame.createState();
-      minigame.prepare(minigameState);
-      renderMinigame();
-    }
-
-    function switchToMainMode() {
-      gameMode = 'main';
-      minigame.stop(minigameState);
-      renderMain();
-    }
-
-    function startMinigameSession() {
-      minigame.start(minigameState);
-      renderMinigame();
-    }
-
-    function onMinigameFishClick() {
-      minigame.catchFish(minigameState);
-      renderMinigame();
+      if (!sparringState.active && sparringState.result === 'clear') {
+        return 'ぜんぶ よけきった。回避の達人！';
+      }
+      return 'スパーリング中。左右に動いて 攻撃をよけよう';
     }
   </script>
 
