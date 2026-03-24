@@ -17,6 +17,7 @@
       --btn-hover: #f3f7fc;
       --accent: #ff8fb1;
       --food-glow: rgba(255, 161, 28, 0.24);
+      --collected-glow: rgba(126, 211, 240, 0.22);
     }
 
     * { box-sizing: border-box; }
@@ -120,6 +121,39 @@
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
     }
 
+    .collected-drop-btn {
+      position: absolute;
+      right: 20px;
+      top: 128px;
+      z-index: 4;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 2px solid #cfe6fb;
+      background: rgba(255,255,255,0.92);
+      color: #31577a;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .collected-drop-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .collected-drop-btn strong {
+      font-size: 12px;
+      color: #55789b;
+    }
+
+    .collected-drop-btn span {
+      white-space: nowrap;
+    }
+
     .status-bubble {
       position: absolute;
       top: 88px;
@@ -131,6 +165,20 @@
       border-radius: 16px;
       padding: 10px 12px;
       font-size: 14px;
+      color: var(--soft);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .mood-badge {
+      position: absolute;
+      top: 150px;
+      left: 20px;
+      z-index: 3;
+      background: rgba(255,255,255,0.88);
+      border: 2px solid #d5e2f1;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
       color: var(--soft);
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
     }
@@ -210,6 +258,10 @@
       transform: scale(1.06) translateY(-2px);
     }
 
+    .seal.is-petting {
+      filter: brightness(1.04);
+    }
+
     .seal.is-sleepy {
       filter: saturate(0.85) brightness(0.95);
     }
@@ -245,6 +297,12 @@
       display: grid;
     }
 
+    .food-drop.is-collected {
+      background: radial-gradient(circle, rgba(255,255,255,0.98) 0%, rgba(236,248,255,0.98) 64%, rgba(194,231,255,0.98) 100%);
+      border-color: #78b8e8;
+      box-shadow: 0 0 0 12px var(--collected-glow), 0 14px 20px rgba(15, 23, 42, 0.10);
+    }
+
     .food-drop::after {
       content: attr(data-label);
       position: absolute;
@@ -272,10 +330,25 @@
       z-index: 4;
     }
 
+    .pet-effect {
+      position: absolute;
+      font-size: 22px;
+      animation: petBurst 0.9s ease-out forwards;
+      pointer-events: none;
+      z-index: 4;
+      filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.8));
+    }
+
     @keyframes floatUp {
       0% { opacity: 0; transform: translateY(0) scale(.9); }
       15% { opacity: 1; }
       100% { opacity: 0; transform: translateY(-38px) scale(1.05); }
+    }
+
+    @keyframes petBurst {
+      0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+      20% { opacity: 1; }
+      100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -34px)) scale(1.15); }
     }
 
     @keyframes foodPulse {
@@ -465,6 +538,40 @@
       color: var(--soft);
     }
 
+    .log-panel {
+      position: absolute;
+      right: 20px;
+      top: 132px;
+      z-index: 3;
+      width: 220px;
+      padding: 12px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 16px;
+      border: 2px solid #d5e2f1;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .log-panel h2 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .log-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--soft);
+    }
+
+    .log-list li {
+      line-height: 1.4;
+      min-height: 1.4em;
+      word-break: break-word;
+    }
+
     .ice-slide-overlay {
       position: absolute;
       inset: 0;
@@ -585,6 +692,11 @@
         max-width: 180px;
       }
 
+      .log-panel {
+        width: 180px;
+        top: 136px;
+      }
+
       .bottom-nav {
         gap: 8px;
         left: 10px;
@@ -614,7 +726,14 @@
     </div>
 
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
+    <div class="mood-badge" id="moodBadge">調子：のんびり</div>
     <div class="time-badge" id="timeBadge">ひる</div>
+    <div class="log-panel" aria-live="polite">
+      <h2>こうどうログ</h2>
+      <ul class="log-list" id="logList">
+        <li>まだログはありません</li>
+      </ul>
+    </div>
 
     <div class="play-area" id="playArea">
       <div class="stats">
@@ -761,6 +880,8 @@
   <script>
     const SAVE_KEY = 'seal-game-save-v2';
     const SAVE_VERSION = 2;
+    const MAX_LOGS = 8;
+    const VISIBLE_LOGS = 5;
 
     const PERSONALITY_PRESETS = {
       playful: { label: 'あそび好き', toySpeedBonus: 0.24, toyMoodBonus: 1.2 },
@@ -774,9 +895,14 @@
         version: SAVE_VERSION,
         lastTick: Date.now(),
         lastStatus: 'のんびりしている',
+        logs: [],
 
         // core resources: 日常的に増減する基本リソース
         fish: 30,
+        collectedItems: {
+          fish: 0,
+          shell: 0
+        },
         hunger: 70,
         happiness: 72,
         stamina: 68,
@@ -791,7 +917,8 @@
 
         // settings: UI 表示やローカル設定
         volume: 70,
-        showTime: true
+        showTime: true,
+        lastPetTime: 0
       };
     }
 
@@ -896,6 +1023,33 @@
 
     // 進化条件データ:
     // growth と minWeight を両方満たした段階が現在ステージになる。
+    const collectedItemTypes = [
+      {
+        key: 'fish',
+        name: 'あつめた小魚',
+        icon: '🐟',
+        desc: 'ゆっくり集まる軽いおやつ。まんぷくとごきげんが少し上がる。',
+        hungerGain: 5,
+        happinessGain: 2,
+        bondGain: 0,
+        staminaGain: 0,
+        growthGain: 0,
+        weightGain: 0.2
+      },
+      {
+        key: 'shell',
+        name: 'ひかる貝がら',
+        icon: '🐚',
+        desc: 'めずらしく見つかる貝がら。なかよしが上がり、まれにおまけがある。',
+        hungerGain: 0,
+        happinessGain: 0,
+        bondGain: 4,
+        staminaGain: 0,
+        growthGain: 0,
+        weightGain: 0
+      }
+    ];
+
     const stageThresholds = [
       { growth: 0, minWeight: 20 },
       { growth: 25, minWeight: 28 },
@@ -910,7 +1064,9 @@
     const fishValue = document.getElementById('fishValue');
     const stageValue = document.getElementById('stageValue');
     const statusBubble = document.getElementById('statusBubble');
+    const moodBadge = document.getElementById('moodBadge');
     const timeBadge = document.getElementById('timeBadge');
+    const logList = document.getElementById('logList');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
     const staminaBar = document.getElementById('staminaBar');
@@ -1018,12 +1174,33 @@
       if (!loaded || typeof loaded !== 'object') return fallback;
       const normalized = { ...fallback, ...loaded };
       normalized.version = typeof loaded.version === 'number' ? loaded.version : fallback.version;
+      normalized.logs = Array.isArray(loaded.logs)
+        ? loaded.logs
+            .filter((entry) => entry && typeof entry.text === 'string' && typeof entry.time === 'number')
+            .slice(-MAX_LOGS)
+        : fallback.logs;
       return normalized;
+    }
+
+    function addLog(text) {
+      if (!text) return;
+      state.logs.push({ text, time: Date.now() });
+      if (state.logs.length > MAX_LOGS) {
+        state.logs.splice(0, state.logs.length - MAX_LOGS);
+      }
     }
 
     function applyDelta(targetState, delta) {
       Object.entries(delta).forEach(([key, value]) => {
         if (typeof value !== 'number' || value === 0) return;
+        if (key === 'collectedFish') {
+          targetState.collectedItems.fish += value;
+          return;
+        }
+        if (key === 'collectedShell') {
+          targetState.collectedItems.shell += value;
+          return;
+        }
         targetState[key] += value;
       });
     }
@@ -1035,17 +1212,21 @@
         applyDelta(state, buildOfflineDelta(elapsedSec));
         clampState();
         state.lastStatus = `おるすばん中に ${Math.floor(elapsedSec / 6)} 秒ぶん すごした`;
+        addLog(state.lastStatus);
       }
       state.lastTick = now;
     }
 
     function buildOfflineDelta(elapsedSec) {
-      return {
+      const delta = {
         hunger: -(elapsedSec * 0.02),
         happiness: -(elapsedSec * 0.015),
         stamina: elapsedSec * 0.01,
         weight: -(elapsedSec * 0.0018)
       };
+      delta.collectedFish = Math.floor(elapsedSec / 240);
+      delta.collectedShell = Math.floor(elapsedSec / 900);
+      return delta;
     }
 
     function bindEvents() {
@@ -1064,10 +1245,16 @@
       });
 
       playArea.addEventListener('click', onPlayAreaClick);
-      sealButton.addEventListener('click', petSeal);
+      playArea.addEventListener('pointerdown', onPetPointerDown);
+      playArea.addEventListener('pointermove', onPetPointerMove);
+      playArea.addEventListener('pointerup', onPetPointerUp);
+      playArea.addEventListener('pointercancel', resetPetInteraction);
+      window.addEventListener('pointerup', onPetPointerUp);
+      window.addEventListener('pointercancel', resetPetInteraction);
       startTrainingBtn.addEventListener('click', startTraining);
       trainingTarget.addEventListener('click', onTrainingTap);
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
+      collectedDropBtn.addEventListener('click', dropCollectedItem);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
       bindIceSlideControls();
 
@@ -1113,6 +1300,18 @@
         vy: 0,
         angle: 0,
         debugTimer: 0
+      };
+    }
+
+    function createPetInteractionState() {
+      return {
+        active: false,
+        pointerId: null,
+        lastX: 0,
+        lastY: 0,
+        distance: 0,
+        tapCount: 0,
+        lastTapTime: 0
       };
     }
 
@@ -1260,11 +1459,12 @@
 
     function canUseAction(kind, item) {
       if (kind === 'food') return state.fish >= item.cost;
+      if (kind === 'collected') return (state.collectedItems[item.key] || 0) > 0;
       return state.stamina >= Math.max(8, item.minStamina - 8);
     }
 
     function prepareActionPlacement(kind, index) {
-      const item = kind === 'food' ? foodItems[index] : toyItems[index];
+      const item = kind === 'food' ? foodItems[index] : kind === 'toy' ? toyItems[index] : collectedItemTypes[index];
       if (!item || !canUseAction(kind, item)) return;
       pendingAction = {
         kind,
@@ -1274,10 +1474,14 @@
       placedAction = null;
       playArea.dataset.dropLabel = kind === 'food'
         ? `${item.name} を落としたい場所をタップ`
-        : getToyDropLabel(item);
+        : kind === 'toy'
+          ? getToyDropLabel(item)
+          : `${item.icon} ${item.name} を落としたい場所をタップ`;
       state.lastStatus = kind === 'food'
         ? `${item.name} を どこに落とすか 選んでいる`
-        : getToyReadyStatus(item);
+        : kind === 'toy'
+          ? getToyReadyStatus(item)
+          : `${item.name} を どこに落とすか 選んでいる`;
       renderFoodList();
       renderToyList();
       closePanels();
@@ -1300,6 +1504,7 @@
       placedAction = { x, y };
       actionDrop.textContent = pendingAction.item.icon;
       actionDrop.dataset.label = pendingAction.item.name;
+      actionDrop.classList.toggle('is-collected', pendingAction.kind === 'collected');
       actionDrop.classList.add('visible');
       updateActionDropPosition();
 
@@ -1310,7 +1515,9 @@
       setSealMode('walk', pendingAction.kind === 'toy' ? 7 : 6);
       state.lastStatus = pendingAction.kind === 'food'
         ? `${pendingAction.item.name} を 見つけて てくてく 向かっている`
-        : getToyChaseStatus(pendingAction.item);
+        : pendingAction.kind === 'toy'
+          ? getToyChaseStatus(pendingAction.item)
+          : `${pendingAction.item.icon} ${pendingAction.item.name} を 見つけて てくてく 向かっている`;
       render();
       saveState();
     }
@@ -1337,6 +1544,7 @@
     function canApplyAction(action, currentState) {
       if (!action) return false;
       if (action.kind === 'food') return currentState.fish >= action.item.cost;
+      if (action.kind === 'collected') return (currentState.collectedItems[action.item.key] || 0) > 0;
       return currentState.stamina >= action.item.minStamina;
     }
 
@@ -1352,6 +1560,11 @@
           fish: -action.item.cost,
           ...buildFoodDelta(action.item)
         };
+      }
+
+      if (action.kind === 'collected') {
+        if (!canApplyAction(action, currentState)) return {};
+        return buildCollectedItemDelta(action.item);
       }
 
       if (!canApplyAction(action, currentState)) {
@@ -1381,6 +1594,16 @@
         };
       }
 
+      if (action.kind === 'collected' && !canApplyAction(action, currentState)) {
+        return {
+          delta: {},
+          statusText: '落とせる食材が もう 残っていなかった',
+          floatText: null,
+          sealMode: null,
+          duration: 0
+        };
+      }
+
       if (action.kind === 'toy' && !canApplyAction(action, currentState)) {
         return {
           delta: buildActionDelta(action, currentState),
@@ -1393,7 +1616,9 @@
 
       return action.kind === 'food'
         ? buildFoodActionResult(action, currentState)
-        : buildToyActionResult(action, currentState);
+        : action.kind === 'collected'
+          ? buildCollectedActionResult(action, currentState)
+          : buildToyActionResult(action, currentState);
     }
 
     function buildFoodActionResult(action, currentState) {
@@ -1416,6 +1641,24 @@
       };
     }
 
+    function buildCollectedActionResult(action, currentState) {
+      const delta = buildActionDelta(action, currentState);
+      const bonusTriggered = action.item.key === 'shell' && ((delta.happiness || 0) > action.item.happinessGain);
+      return {
+        delta,
+        statusText: action.item.key === 'shell'
+          ? bonusTriggered
+            ? `${action.item.name} を ひろって うれしそう。きらっと おまけも見つけた`
+            : `${action.item.name} を ひろって だいじそうに している`
+          : `${action.item.name} を ぱくっと ひろって たべた`,
+        floatText: action.item.key === 'shell'
+          ? bonusTriggered ? '🐚 +なかよし +おまけ' : '🐚 +なかよし'
+          : '🐟 +まんぷく +ごきげん',
+        sealMode: action.item.key === 'fish' ? 'eat' : 'idle',
+        duration: action.item.key === 'fish' ? 1.8 : 1.4
+      };
+    }
+
     /**
      * result をまとめて反映する唯一の入口。
      * delta -> state 更新 -> status/float/sealMode の順で適用する。
@@ -1431,7 +1674,7 @@
     function resolvePendingAction() {
       const action = getResolvedAction();
       if (!action || !seal.actionTarget) return;
-      if (pendingAction.kind === 'food') {
+      if (pendingAction.kind === 'food' || pendingAction.kind === 'collected') {
         resolveFoodAction(action);
       } else {
         resolveToyAction(action);
@@ -1448,13 +1691,33 @@
         return;
       }
       applyResult(buildActionResult(action, state));
+      addLog(state.lastStatus);
       finalizeResolvedAction();
     }
 
     function resolveToyAction(action) {
       // 遊び解決: 成否や疲労分岐も buildActionResult 側に寄せる。
       applyResult(buildActionResult(action, state));
+      addLog(state.lastStatus);
       finalizeResolvedAction();
+    }
+
+    function buildCollectedItemDelta(item) {
+      const delta = {
+        collectedFish: item.key === 'fish' ? -1 : 0,
+        collectedShell: item.key === 'shell' ? -1 : 0,
+        hunger: item.hungerGain,
+        happiness: item.happinessGain,
+        bond: item.bondGain,
+        stamina: item.staminaGain,
+        growth: item.growthGain,
+        weight: item.weightGain
+      };
+      if (item.key === 'shell' && Math.random() < 0.18) {
+        delta.happiness += 3;
+        delta.growth += 1;
+      }
+      return delta;
     }
 
     function buildFoodDelta(item) {
@@ -1499,10 +1762,77 @@
       pendingAction = null;
       placedAction = null;
       seal.actionTarget = null;
-      actionDrop.classList.remove('visible');
+      actionDrop.classList.remove('visible', 'is-collected');
       actionDrop.dataset.label = '';
       playArea.classList.remove('is-drop-mode');
       playArea.dataset.dropLabel = '';
+    }
+
+    function onPetPointerDown(event) {
+      if (!canStartPetInteraction()) return;
+      if (!isPointInsideSeal(event.clientX, event.clientY)) return;
+      petInteraction.active = true;
+      petInteraction.pointerId = event.pointerId;
+      petInteraction.lastX = event.clientX;
+      petInteraction.lastY = event.clientY;
+      petInteraction.distance = 0;
+    }
+
+    function onPetPointerMove(event) {
+      if (!petInteraction.active || petInteraction.pointerId !== event.pointerId) return;
+
+      const moveX = event.clientX - petInteraction.lastX;
+      const moveY = event.clientY - petInteraction.lastY;
+      petInteraction.distance += Math.hypot(moveX, moveY);
+      petInteraction.lastX = event.clientX;
+      petInteraction.lastY = event.clientY;
+
+      if (!isPointInsideSeal(event.clientX, event.clientY)) return;
+      if (petInteraction.distance < 52) return;
+
+      petInteraction.distance = 0;
+      petSeal(event.clientX, event.clientY);
+      resetPetDrag();
+    }
+
+    function onPetPointerUp(event) {
+      if (!petInteraction.active || petInteraction.pointerId !== event.pointerId) return;
+
+      if (isPointInsideSeal(event.clientX, event.clientY)) {
+        const now = Date.now();
+        petInteraction.tapCount = now - petInteraction.lastTapTime <= 450
+          ? petInteraction.tapCount + 1
+          : 1;
+        petInteraction.lastTapTime = now;
+
+        if (petInteraction.tapCount >= 3) {
+          petSeal(event.clientX, event.clientY);
+          petInteraction.tapCount = 0;
+        }
+      }
+
+      resetPetDrag();
+    }
+
+    function resetPetInteraction() {
+      resetPetDrag();
+      petInteraction.tapCount = 0;
+      petInteraction.lastTapTime = 0;
+    }
+
+    function resetPetDrag() {
+      petInteraction.active = false;
+      petInteraction.pointerId = null;
+      petInteraction.distance = 0;
+    }
+
+    function canStartPetInteraction() {
+      return !iceSlideMode && !pendingAction && !placedAction && !seal.actionTarget;
+    }
+
+    function isPointInsideSeal(clientX, clientY) {
+      const rect = sealButton.getBoundingClientRect();
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
     }
 
     function updateActionDropPosition() {
@@ -1511,31 +1841,37 @@
       actionDrop.style.top = `${placedAction.y - 32}px`;
     }
 
-    function petSeal(e) {
-      if (pendingAction && !placedAction) return;
+    function petSeal(clientX, clientY) {
+      if (!canStartPetInteraction()) return;
+      const now = Date.now();
+      if (now - state.lastPetTime < 1000) return;
+
       applyDelta(state, buildPetDelta());
-      if (state.happiness > 80) state.fish += 2;
+      state.lastPetTime = now;
       state.lastStatus = randomFrom([
-        'うれしそうに こちらを見ている',
-        'ぷにっとして ごきげん',
-        'しっぽを ぱたぱた している',
-        'なでられて まんぞくそう'
+        'なでられて うれしそうに している',
+        'きもちよさそうに 目を細めている',
+        'しっぽを ぱたぱた して よろこんでいる',
+        'なでられて ちょっと 甘えてきた'
       ]);
+      addLog(state.lastStatus);
       updateStage();
       clampState();
       sealButton.classList.add('is-pet');
+      sealButton.classList.add('is-petting');
+      setSealMode('idle', 0.45);
       setTimeout(() => sealButton.classList.remove('is-pet'), 180);
-      spawnFloatText(e ? e.clientX : null, e ? e.clientY : null, '+なかよし');
+      setTimeout(() => sealButton.classList.remove('is-petting'), 260);
+      spawnFloatText(clientX, clientY, 'なでた！');
+      spawnPetEffect(clientX, clientY);
       render();
       saveState();
     }
 
     function buildPetDelta() {
       return {
-        happiness: 4,
-        bond: 2,
-        stamina: -1,
-        growth: 1
+        happiness: 2,
+        bond: 1
       };
     }
 
@@ -1556,6 +1892,7 @@
         applyDelta(state, buildTrainingSuccessDelta());
         state.trainingCount += 1;
         state.lastStatus = 'トレーニング成功。ちょっと たくましく なった';
+        addLog(state.lastStatus);
         updateStage();
         clampState();
         trainingBox.hidden = true;
@@ -1600,6 +1937,8 @@
       state.bond = clamp(state.bond, 0, 100);
       state.weight = clamp(state.weight, 16, 80);
       state.fish = Math.max(0, Math.floor(state.fish));
+      state.collectedItems.fish = Math.max(0, Math.floor(state.collectedItems.fish));
+      state.collectedItems.shell = Math.max(0, Math.floor(state.collectedItems.shell));
       state.trainingCount = Math.max(0, Math.floor(state.trainingCount));
     }
 
@@ -1777,6 +2116,21 @@
       if (state.bond > 60 && Math.random() < dt * 0.08) state.fish += 1;
     }
 
+    function collectPassiveItems(dt) {
+      if (Math.random() < dt / 240) {
+        state.collectedItems.fish += 1;
+        if (!pendingAction && Math.random() < 0.3) {
+          state.lastStatus = '水辺で あつめた小魚を 1こ 見つけた';
+        }
+      }
+      if (Math.random() < dt / 780) {
+        state.collectedItems.shell += 1;
+        if (!pendingAction && Math.random() < 0.5) {
+          state.lastStatus = 'きらっと ひかる貝がらを 見つけた';
+        }
+      }
+    }
+
     function tickSeal(dt) {
       // あざらし本体の移動・行動状態だけを更新する。
       seal.timer -= dt;
@@ -1826,7 +2180,9 @@
         setSealMode('walk', pendingAction.kind === 'toy' ? 4.8 : 4);
         state.lastStatus = pendingAction.kind === 'toy'
           ? `${pendingAction.item.name} を 追いかけて ダッシュしている`
-          : `${pendingAction.item.name} に まっすぐ 向かっている`;
+          : pendingAction.kind === 'collected'
+            ? `${pendingAction.item.icon} ${pendingAction.item.name} に まっすぐ 向かっている`
+            : `${pendingAction.item.name} に まっすぐ 向かっている`;
         return;
       }
 
@@ -1896,9 +2252,11 @@
       const scale = [0.8, 0.92, 1.02, 1.12][state.stage] || 1;
       const rotation = seal.mode === 'sleep' ? -7 : seal.mode === 'sit' ? -3 : 0;
       const facingScale = seal.facing === -1 ? -1 : 1;
+      const petLift = sealButton.classList.contains('is-pet') ? -6 : 0;
+      const petRotation = sealButton.classList.contains('is-petting') ? 4 : 0;
       sealButton.style.left = `${seal.x - 74}px`;
-      sealButton.style.top = `${baseY - 74}px`;
-      sealButton.style.transform = `scale(${facingScale * scale}, ${scale}) rotate(${rotation}deg)`;
+      sealButton.style.top = `${baseY - 74 + petLift}px`;
+      sealButton.style.transform = `scale(${facingScale * scale}, ${scale}) rotate(${rotation + petRotation}deg)`;
       sealShadow.style.left = `${seal.x - 60}px`;
       sealShadow.style.top = `${seal.y + 48}px`;
       sealShadow.style.width = `${118 * scale}px`;
@@ -1913,10 +2271,19 @@
       timeBadge.textContent = isNight ? 'よる' : 'ひる';
     }
 
+    function getMood(currentState) {
+      if (currentState.stamina < 25) return 'ねむそう';
+      if (currentState.hunger < 25) return 'おなかすいた';
+      if (currentState.happiness > 75) return 'げんきいっぱい';
+      if (currentState.happiness > 50) return 'ごきげん';
+      return 'のんびり';
+    }
+
     function render() {
       fishValue.textContent = Math.floor(state.fish);
       stageValue.textContent = getStageLabel();
       statusBubble.textContent = state.lastStatus;
+      moodBadge.textContent = `調子：${getMood(state)}`;
       hungerBar.style.width = `${state.hunger}%`;
       happyBar.style.width = `${state.happiness}%`;
       staminaBar.style.width = `${state.stamina}%`;
@@ -1928,7 +2295,20 @@
       bondValue.textContent = Math.floor(state.bond);
       weightValue.textContent = state.weight.toFixed(1);
       timeBadge.style.display = state.showTime ? 'block' : 'none';
+      collectedSummary.textContent = `🐟${state.collectedItems.fish} / 🐚${state.collectedItems.shell}`;
+      collectedDropBtn.disabled = !getAvailableCollectedItems().length || Boolean(pendingAction);
       playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !placedAction));
+    }
+
+    function renderLogs() {
+      const recentLogs = state.logs.slice(-VISIBLE_LOGS).reverse();
+      if (!recentLogs.length) {
+        logList.innerHTML = '<li>まだログはありません</li>';
+        return;
+      }
+      logList.innerHTML = recentLogs
+        .map((entry) => `<li>${entry.text}</li>`)
+        .join('');
     }
 
     function spawnFloatText(clientX, clientY, text) {
@@ -1942,6 +2322,29 @@
       el.style.top = `${y}px`;
       playArea.appendChild(el);
       setTimeout(() => el.remove(), 1000);
+    }
+
+    function spawnPetEffect(clientX, clientY) {
+      const rect = playArea.getBoundingClientRect();
+      const baseX = clientX ? clientX - rect.left : seal.x;
+      const baseY = clientY ? clientY - rect.top : seal.y - 16;
+      const bursts = [
+        { icon: '💗', dx: -22, dy: -36 },
+        { icon: '✨', dx: 0, dy: -48 },
+        { icon: '💗', dx: 20, dy: -30 }
+      ];
+
+      bursts.forEach((burst) => {
+        const el = document.createElement('div');
+        el.className = 'pet-effect';
+        el.textContent = burst.icon;
+        el.style.left = `${baseX}px`;
+        el.style.top = `${baseY}px`;
+        el.style.setProperty('--dx', `${burst.dx}px`);
+        el.style.setProperty('--dy', `${burst.dy}px`);
+        playArea.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+      });
     }
 
     function getMoveSpeedScale(chasingAction) {
