@@ -2731,6 +2731,7 @@
         chargeDirection: 1,
         direction: { x: 0, y: -1 },
         directionAngle: -Math.PI / 2,
+        pull: { x: 0, y: 0, len: 0, angle: 0 },
         resultText: 'まだ投げていないよ。',
         statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
         house: { x: 0, y: 0, rings: 120 },
@@ -3008,6 +3009,7 @@
       curlingState.stone.vy = 0;
       curlingState.direction = { x: 0, y: -1 };
       curlingState.directionAngle = -Math.PI / 2;
+      curlingState.pull = { x: 0, y: 0, len: 0, angle: 0 };
       curlingState.stone.type = randomFrom(Object.keys(CURLING_STONE_TYPES));
       curlingState.resultText = `${curlingState.shotsTotal - curlingState.shotsLeft + 1}/${curlingState.shotsTotal}投目 (${curlingState.stone.type})`;
     }
@@ -3035,27 +3037,37 @@
     function onCurlingPointerUp() {
       if (!curlingState.active) return;
       if (!curlingState.dragging) return;
-      const pullStrength = Math.hypot(curlingState.direction.x, curlingState.direction.y) * curlingState.power;
+      const pullStrength = curlingState.power;
       curlingState.dragging = false;
       if (pullStrength > 0.08) {
         shootStone();
       }
+      curlingState.pull = { x: 0, y: 0, len: 0, angle: 0 };
       renderCurling();
     }
 
     function updateCurlingAim(event) {
       const point = getPointerPosition(event, curlingSheet);
       if (!point) return;
-      const dx = curlingState.stone.x - point.x;
-      const dy = curlingState.stone.y - point.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance < 12) return;
+      const pullXRaw = point.x - curlingState.stone.x;
+      const pullYRaw = point.y - curlingState.stone.y;
+      const distanceRaw = Math.hypot(pullXRaw, pullYRaw);
       const maxPull = 180;
-      const normalizedPull = Math.min(maxPull, distance);
+      const distance = Math.min(maxPull, distanceRaw);
+      if (distance < 12) return;
+      const ratio = distance / distanceRaw;
+      const pullX = pullXRaw * ratio;
+      const pullY = pullYRaw * ratio;
       const control = CURLING_STONE_TYPES[curlingState.stone.type]?.control || 1;
-      curlingState.direction = { x: dx / distance, y: dy / distance };
+      curlingState.pull = {
+        x: pullX,
+        y: pullY,
+        len: distance,
+        angle: Math.atan2(pullY, pullX)
+      };
+      curlingState.direction = { x: -(pullX / distance), y: -(pullY / distance) };
       curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x) * control;
-      curlingState.power = clamp(normalizedPull / maxPull, 0.12, 1);
+      curlingState.power = clamp(distance / maxPull, 0, 1);
       curlingState.statusText = '石を引っ張って、はなしてショット！';
     }
 
@@ -3081,6 +3093,7 @@
       curlingState.statusText = `${curlingState.stone.type} stone がすべっている…`;
       curlingState.resultText = 'ストーンが止まるまで見守ろう。';
       curlingState.hasScore = false;
+      curlingState.pull = { x: 0, y: 0, len: 0, angle: 0 };
       renderCurling();
     }
 
@@ -3263,14 +3276,14 @@
         el.style.top = `${stone.y}px`;
       });
 
-      const aimLength = 110;
+      const aimLength = curlingState.pull.len;
       curlingAimLine.style.left = `${curlingState.stone.x}px`;
       curlingAimLine.style.top = `${curlingState.stone.y}px`;
       curlingAimLine.style.width = `${aimLength}px`;
-      curlingAimLine.style.transform = `rotate(${curlingState.directionAngle}rad)`;
+      curlingAimLine.style.transform = `rotate(${curlingState.pull.angle}rad)`;
       curlingAimLine.classList.toggle('visible', curlingState.dragging && curlingState.aiming && !curlingState.shotTaken);
-      curlingAimAnchor.style.left = `${curlingState.stone.x + curlingState.direction.x * aimLength}px`;
-      curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.direction.y * aimLength}px`;
+      curlingAimAnchor.style.left = `${curlingState.stone.x + curlingState.pull.x}px`;
+      curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.pull.y}px`;
       curlingAimAnchor.classList.toggle('visible', curlingState.dragging && curlingState.aiming && !curlingState.shotTaken);
 
       if (curlingLaunchBtn) curlingLaunchBtn.disabled = curlingState.shotTaken || curlingState.gameFinished;
