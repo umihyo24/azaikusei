@@ -598,7 +598,7 @@
     .minigame-overlay {
       position: absolute;
       inset: 0;
-      z-index: 6;
+      z-index: 4;
       display: none;
       background: linear-gradient(180deg, rgba(215, 241, 255, 0.98) 0%, rgba(241, 250, 255, 0.98) 100%);
       overflow: hidden;
@@ -1383,7 +1383,7 @@
       border: 3px solid rgba(255,255,255,0.92);
       box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
       pointer-events: none;
-      z-index: 4;
+      z-index: 6;
     }
 
     .curling-stone.stone-light::before { background: #22c1c3; }
@@ -1811,13 +1811,7 @@
         <div class="curling-stone" id="curlingStone"></div>
       </div>
       <div class="curling-controls">
-        <div class="curling-card curling-power">
-          <strong>パワー</strong>
-          <div class="curling-power-bar"><span id="curlingPowerFill"></span></div>
-          <div id="curlingPowerText">0%</div>
-        </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="curling-launch-btn" id="curlingLaunchBtn">長押しでショット</button>
           <button class="curling-retry-btn" id="curlingRetryBtn">リトライ</button>
         </div>
       </div>
@@ -2716,6 +2710,7 @@
         resultCommitted: false,
         gameFinished: false,
         targetElements: [],
+        targetLabelElements: [],
         settledStoneElements: []
       };
     }
@@ -2847,12 +2842,6 @@
       curlingSheet.addEventListener('touchstart', onCurlingPointerDown, { passive: false });
       window.addEventListener('touchmove', onCurlingPointerMove, { passive: false });
       window.addEventListener('touchend', onCurlingPointerUp);
-
-      curlingLaunchBtn.addEventListener('mousedown', beginCurlingCharge);
-      curlingLaunchBtn.addEventListener('touchstart', beginCurlingCharge, { passive: false });
-      window.addEventListener('mouseup', releaseCurlingCharge);
-      window.addEventListener('touchend', releaseCurlingCharge);
-      curlingLaunchBtn.addEventListener('mouseleave', releaseCurlingCharge);
     }
 
     function startCurling() {
@@ -2924,15 +2913,17 @@
 
     function buildCurlingTargets(rect) {
       return [
-        { id: 'left-large', x: rect.width * 0.28, y: rect.height * 0.36, radius: 104, score: 10, label: 'L 10' },
-        { id: 'center-medium', x: rect.width * 0.52, y: rect.height * 0.28, radius: 84, score: 30, label: 'M 30' },
-        { id: 'right-small', x: rect.width * 0.74, y: rect.height * 0.22, radius: 60, score: 80, label: 'S 80' }
+        { id: 'left-large', x: rect.width * 0.28, y: rect.height * 0.58, radius: 104, score: 10, label: '10点' },
+        { id: 'center-medium', x: rect.width * 0.52, y: rect.height * 0.43, radius: 82, score: 30, label: '30点' },
+        { id: 'right-small', x: rect.width * 0.75, y: rect.height * 0.30, radius: 58, score: 80, label: '80点' }
       ];
     }
 
     function cleanupCurlingAuxElements() {
       curlingState.targetElements.forEach((el) => el.remove());
       curlingState.targetElements = [];
+      curlingState.targetLabelElements.forEach((el) => el.remove());
+      curlingState.targetLabelElements = [];
       curlingState.settledStoneElements.forEach((el) => el.remove());
       curlingState.settledStoneElements = [];
     }
@@ -2954,6 +2945,23 @@
         el.style.top = `${target.y}px`;
         el.style.opacity = idx === 0 ? '0.95' : idx === 1 ? '0.9' : '0.88';
         el.style.borderColor = idx === 0 ? 'rgba(59,130,246,0.45)' : idx === 1 ? 'rgba(14,165,233,0.48)' : 'rgba(244,63,94,0.5)';
+
+        const label = document.createElement('div');
+        label.textContent = target.label;
+        label.style.position = 'absolute';
+        label.style.left = `${target.x + target.radius * 0.45}px`;
+        label.style.top = `${target.y - target.radius * 0.45}px`;
+        label.style.transform = 'translate(-50%, -50%)';
+        label.style.fontSize = '12px';
+        label.style.fontWeight = '700';
+        label.style.color = '#31577a';
+        label.style.background = 'rgba(255,255,255,0.92)';
+        label.style.border = '2px solid #cfe6fb';
+        label.style.borderRadius = '999px';
+        label.style.padding = '3px 8px';
+        label.style.zIndex = '7';
+        curlingSheet.appendChild(label);
+        curlingState.targetLabelElements.push(label);
       });
     }
 
@@ -2976,7 +2984,11 @@
     }
 
     function onCurlingPointerDown(event) {
-      if (!curlingState.active || curlingState.shotTaken || curlingState.charging) return;
+      if (!curlingState.active || curlingState.shotTaken || curlingState.gameFinished) return;
+      const point = getPointerPosition(event, curlingSheet);
+      if (!point) return;
+      const distanceFromStone = Math.hypot(point.x - curlingState.stone.x, point.y - curlingState.stone.y);
+      if (distanceFromStone > 34) return;
       event.preventDefault();
       curlingState.dragging = true;
       curlingState.aiming = true;
@@ -2993,35 +3005,29 @@
 
     function onCurlingPointerUp() {
       if (!curlingState.active) return;
+      if (!curlingState.dragging) return;
+      const pullStrength = Math.hypot(curlingState.direction.x, curlingState.direction.y) * curlingState.power;
       curlingState.dragging = false;
+      if (pullStrength > 0.08) {
+        shootStone();
+      }
       renderCurling();
-    }
-
-    function beginCurlingCharge(event) {
-      if (!curlingState.active || curlingState.shotTaken) return;
-      event.preventDefault();
-      curlingState.charging = true;
-      curlingState.statusText = 'パワー調整中… はなすとショット！';
-      renderCurling();
-    }
-
-    function releaseCurlingCharge() {
-      if (!curlingState.active || !curlingState.charging) return;
-      curlingState.charging = false;
-      shootStone();
     }
 
     function updateCurlingAim(event) {
       const point = getPointerPosition(event, curlingSheet);
       if (!point) return;
-      const dx = point.x - curlingState.stone.x;
-      const dy = point.y - curlingState.stone.y;
+      const dx = curlingState.stone.x - point.x;
+      const dy = curlingState.stone.y - point.y;
       const distance = Math.hypot(dx, dy);
       if (distance < 12) return;
+      const maxPull = 180;
+      const normalizedPull = Math.min(maxPull, distance);
       const control = CURLING_STONE_TYPES[curlingState.stone.type]?.control || 1;
       curlingState.direction = { x: dx / distance, y: dy / distance };
       curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x) * control;
-      curlingState.statusText = '方向OK。長押しでパワーをためてショットしよう。';
+      curlingState.power = clamp(normalizedPull / maxPull, 0.12, 1);
+      curlingState.statusText = '石を引っ張って、はなしてショット！';
     }
 
     function getPointerPosition(event, element) {
@@ -3062,19 +3068,6 @@
 
     function updateCurling(dt) {
       if (!curlingState.active) return;
-
-      if (curlingState.charging && !curlingState.shotTaken) {
-        const powerDelta = dt * 1.3 * curlingState.chargeDirection;
-        let nextPower = curlingState.power + powerDelta;
-        if (nextPower >= 1) {
-          nextPower = 1;
-          curlingState.chargeDirection = -1;
-        } else if (nextPower <= 0.08) {
-          nextPower = 0.08;
-          curlingState.chargeDirection = 1;
-        }
-        curlingState.power = nextPower;
-      }
 
       if (!curlingState.shotTaken) {
         renderCurling();
@@ -3177,6 +3170,26 @@
         curlingState.stone.y = maxY;
         curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * bounceFactor;
       }
+
+      curlingState.hasScore = true;
+      curlingState.gameFinished = true;
+      curlingState.statusText = `最終スコア ${curlingState.score}点。`;
+      curlingState.resultText = buildCurlingResultText(curlingState.score);
+    }
+
+    function addSettledCurlingStone() {
+      const settled = {
+        x: curlingState.stone.x,
+        y: curlingState.stone.y,
+        vx: curlingState.stone.vx,
+        vy: curlingState.stone.vy,
+        type: curlingState.stone.type
+      };
+      curlingState.placedStones.push(settled);
+      const el = document.createElement('div');
+      el.className = `curling-stone settled stone-${settled.type}`;
+      curlingSheet.appendChild(el);
+      curlingState.settledStoneElements.push(el);
     }
 
     function finalizeCurlingShot() {
@@ -3226,8 +3239,8 @@
       curlingStone.style.left = `${curlingState.stone.x}px`;
       curlingStone.style.top = `${curlingState.stone.y}px`;
       curlingStone.className = `curling-stone stone-${curlingState.stone.type}`;
-      curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
-      curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
+      if (curlingPowerFill) curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
+      if (curlingPowerText) curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
       curlingScoreValue.textContent = String(curlingState.score);
       curlingStatusText.textContent = `${curlingState.statusText}（残り ${curlingState.shotsLeft}投）`;
       curlingResultText.textContent = curlingState.resultText;
@@ -3245,12 +3258,12 @@
       curlingAimLine.style.top = `${curlingState.stone.y}px`;
       curlingAimLine.style.width = `${aimLength}px`;
       curlingAimLine.style.transform = `rotate(${curlingState.directionAngle}rad)`;
-      curlingAimLine.classList.toggle('visible', curlingState.aiming && !curlingState.shotTaken);
+      curlingAimLine.classList.toggle('visible', curlingState.dragging && curlingState.aiming && !curlingState.shotTaken);
       curlingAimAnchor.style.left = `${curlingState.stone.x + curlingState.direction.x * aimLength}px`;
       curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.direction.y * aimLength}px`;
-      curlingAimAnchor.classList.toggle('visible', curlingState.aiming && !curlingState.shotTaken);
+      curlingAimAnchor.classList.toggle('visible', curlingState.dragging && curlingState.aiming && !curlingState.shotTaken);
 
-      curlingLaunchBtn.disabled = curlingState.shotTaken || curlingState.gameFinished;
+      if (curlingLaunchBtn) curlingLaunchBtn.disabled = curlingState.shotTaken || curlingState.gameFinished;
       curlingRetryBtn.disabled = !curlingState.active;
     }
 
