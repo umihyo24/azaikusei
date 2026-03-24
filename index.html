@@ -1384,6 +1384,11 @@
       pointer-events: none;
     }
 
+    .curling-stone.stone-light::before { background: #22c1c3; }
+    .curling-stone.stone-normal::before { background: #ef4444; }
+    .curling-stone.stone-heavy::before { background: #1f2937; }
+    .curling-stone.settled { opacity: 0.92; }
+
     .curling-stone::before {
       content: "";
       position: absolute;
@@ -1785,7 +1790,7 @@
       <div class="curling-info">
         <div class="curling-card">
           <strong>あそびかた</strong>
-          <div id="curlingStatusText">ドラッグで方向を決めて、ボタン長押しでパワーをためよう。</div>
+          <div id="curlingStatusText">3〜5投のショットで合計点を狙おう。石の重さで挙動が変わるよ。</div>
         </div>
         <div class="curling-card">
           <strong>スコア</strong>
@@ -2438,11 +2443,13 @@
         },
         update(dt) {
           updateCurling(dt);
-          if (curlingState.hasScore && !curlingState.resultCommitted) {
+          if (curlingState.gameFinished && !curlingState.resultCommitted) {
             curlingState.resultCommitted = true;
-            finishMinigame(buildTrainingResult('curling', true, curlingState.score, scoreToPerformance(curlingState.score), {
+            const performance = curlingState.score >= 120 ? 'great' : curlingState.score >= 60 ? 'good' : 'ok';
+            finishMinigame(buildTrainingResult('curling', curlingState.score >= 60, curlingState.score, performance, {
               durationSec: roundDuration((Date.now() - minigameRunner.startedAt) / 1000),
-              combo: 0
+              shots: curlingState.shotsTotal,
+              ringsHit: curlingState.placedStones.filter((stone) => calcScoreForPosition(stone.x, stone.y) > 0).length
             }));
           }
         },
@@ -2647,25 +2654,39 @@
       };
     }
 
+    const CURLING_STONE_TYPES = {
+      light: { label: 'light', speedMul: 1.12, friction: 0.972, bounce: 0.74, push: 0.78, control: 1.12 },
+      normal: { label: 'normal', speedMul: 1, friction: 0.985, bounce: 0.82, push: 1, control: 1 },
+      heavy: { label: 'heavy', speedMul: 0.9, friction: 0.992, bounce: 0.9, push: 1.34, control: 0.84 }
+    };
+
     function createCurlingState() {
       return {
         active: false,
-        stone: { x: 0, y: 0, vx: 0, vy: 0 },
+        stone: { x: 0, y: 0, vx: 0, vy: 0, type: 'normal' },
+        placedStones: [],
+        targetRings: [],
         aiming: true,
         power: 0,
         score: 0,
         shotTaken: false,
+        shotsTotal: 0,
+        shotsLeft: 0,
+        shotScore: 0,
         dragging: false,
         charging: false,
         chargeDirection: 1,
         direction: { x: 0, y: -1 },
         directionAngle: -Math.PI / 2,
         resultText: 'まだ投げていないよ。',
-        statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
+        statusText: '3〜5投で合計スコアを狙おう。',
         house: { x: 0, y: 0, rings: 120 },
         arena: { width: 0, height: 0, stoneRadius: 24 },
         hasScore: false,
-        resultCommitted: false
+        resultCommitted: false,
+        gameFinished: false,
+        targetElements: [],
+        settledStoneElements: []
       };
     }
 
@@ -2812,12 +2833,14 @@
       curlingState = createCurlingState();
       curlingState.active = true;
       initializeCurlingLayout();
+      prepareNextCurlingStone();
       curlingOverlay.classList.add('open');
       renderCurling();
     }
 
     function stopCurling() {
       if (gameMode === 'curling') gameMode = 'main';
+      curlingSheet.querySelectorAll('.extra-target, .curling-stone.settled').forEach((node) => node.remove());
       curlingState = createCurlingState();
       curlingOverlay.classList.remove('open');
       renderCurling();
@@ -2845,7 +2868,7 @@
       curlingState.arena.width = rect.width;
       curlingState.arena.height = rect.height;
       curlingState.house.x = rect.width * 0.5;
-      curlingState.house.y = rect.height * 0.3;
+      curlingState.house.y = rect.height * 0.32;
       curlingState.house.rings = 120;
       curlingState.stone.x = rect.width * 0.5;
       curlingState.stone.y = rect.height * 0.83;
@@ -2853,6 +2876,66 @@
       curlingState.stone.vy = 0;
       curlingState.direction = { x: 0, y: -1 };
       curlingState.directionAngle = -Math.PI / 2;
+      curlingState.shotsTotal = randomFrom([3, 4, 5]);
+      curlingState.shotsLeft = curlingState.shotsTotal;
+      curlingState.score = 0;
+      curlingState.placedStones = [];
+      curlingState.targetRings = buildCurlingTargets(rect);
+      cleanupCurlingAuxElements();
+      buildCurlingTargetElements();
+      curlingState.statusText = `${curlingState.shotsTotal}投チャレンジ。まずは1投目！`;
+    }
+
+    function buildCurlingTargets(rect) {
+      return [
+        { id: 'left-large', x: rect.width * 0.28, y: rect.height * 0.36, radius: 104, score: 10, label: 'L 10' },
+        { id: 'center-medium', x: rect.width * 0.52, y: rect.height * 0.28, radius: 84, score: 30, label: 'M 30' },
+        { id: 'right-small', x: rect.width * 0.74, y: rect.height * 0.22, radius: 60, score: 80, label: 'S 80' }
+      ];
+    }
+
+    function cleanupCurlingAuxElements() {
+      curlingState.targetElements.forEach((el) => el.remove());
+      curlingState.targetElements = [];
+      curlingState.settledStoneElements.forEach((el) => el.remove());
+      curlingState.settledStoneElements = [];
+    }
+
+    function buildCurlingTargetElements() {
+      const targets = curlingState.targetRings;
+      if (!targets.length) return;
+      targets.forEach((target, idx) => {
+        const el = idx === 0 ? curlingHouse : document.createElement('div');
+        if (idx !== 0) {
+          el.className = 'curling-house extra-target';
+          curlingSheet.appendChild(el);
+          curlingState.targetElements.push(el);
+        }
+        const size = target.radius * 2;
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        el.style.left = `${target.x}px`;
+        el.style.top = `${target.y}px`;
+      });
+    }
+
+    function prepareNextCurlingStone() {
+      curlingState.shotTaken = false;
+      curlingState.aiming = true;
+      curlingState.dragging = false;
+      curlingState.charging = false;
+      curlingState.power = 0;
+      curlingState.chargeDirection = 1;
+      curlingState.shotScore = 0;
+      curlingState.stone.x = curlingState.arena.width * 0.5;
+      curlingState.stone.y = curlingState.arena.height * 0.83;
+      curlingState.stone.vx = 0;
+      curlingState.stone.vy = 0;
+      curlingState.direction = { x: 0, y: -1 };
+      curlingState.directionAngle = -Math.PI / 2;
+      curlingState.stone.type = randomFrom(Object.keys(CURLING_STONE_TYPES));
+      curlingState.statusText = `${curlingState.shotsTotal - curlingState.shotsLeft + 1}/${curlingState.shotsTotal}投目 (${curlingState.stone.type})`;
+      curlingState.resultText = 'ドラッグで方向を決めて、長押しでショット。';
     }
 
     function onCurlingPointerDown(event) {
@@ -2898,8 +2981,9 @@
       const dy = point.y - curlingState.stone.y;
       const distance = Math.hypot(dx, dy);
       if (distance < 12) return;
+      const control = CURLING_STONE_TYPES[curlingState.stone.type]?.control || 1;
       curlingState.direction = { x: dx / distance, y: dy / distance };
-      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x);
+      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x) * control;
       curlingState.statusText = '方向OK。長押しでパワーをためてショットしよう。';
     }
 
@@ -2915,24 +2999,28 @@
 
     function shootStone() {
       if (!curlingState.active || curlingState.shotTaken) return;
-      const speed = 120 + (curlingState.power * 360);
-      curlingState.stone.vx = curlingState.direction.x * speed;
-      curlingState.stone.vy = curlingState.direction.y * speed;
+      const stoneConfig = CURLING_STONE_TYPES[curlingState.stone.type] || CURLING_STONE_TYPES.normal;
+      const speed = (120 + (curlingState.power * 360)) * stoneConfig.speedMul;
+      const angle = curlingState.directionAngle;
+      curlingState.stone.vx = Math.cos(angle) * speed;
+      curlingState.stone.vy = Math.sin(angle) * speed;
       curlingState.aiming = false;
       curlingState.shotTaken = true;
-      curlingState.statusText = 'ストーンがすべっている…';
+      curlingState.statusText = `${curlingState.stone.type} stone がすべっている…`;
       curlingState.resultText = 'ストーンが止まるまで見守ろう。';
       curlingState.hasScore = false;
       renderCurling();
     }
 
-    function calcScore() {
-      const dx = curlingState.stone.x - curlingState.house.x;
-      const dy = curlingState.stone.y - curlingState.house.y;
-      const distance = Math.hypot(dx, dy);
-      const maxDistance = curlingState.house.rings;
-      const normalized = clamp(1 - (distance / maxDistance), 0, 1);
-      return Math.round(normalized * 100);
+    function calcScoreForPosition(x, y) {
+      let best = 0;
+      curlingState.targetRings.forEach((target) => {
+        const distance = Math.hypot(x - target.x, y - target.y);
+        if (distance <= target.radius) {
+          best = Math.max(best, target.score);
+        }
+      });
+      return best;
     }
 
     function updateCurling(dt) {
@@ -2956,29 +3044,81 @@
         return;
       }
 
-      const friction = Math.pow(0.985, dt * 60);
+      const stoneConfig = CURLING_STONE_TYPES[curlingState.stone.type] || CURLING_STONE_TYPES.normal;
+      const friction = Math.pow(stoneConfig.friction, dt * 60);
       curlingState.stone.vx *= friction;
       curlingState.stone.vy *= friction;
       curlingState.stone.x += curlingState.stone.vx * dt;
       curlingState.stone.y += curlingState.stone.vy * dt;
-      reflectCurlingStone();
+      reflectCurlingStone(stoneConfig.bounce);
+      resolveCurlingStoneCollision(stoneConfig.push, dt);
 
       const speed = Math.hypot(curlingState.stone.vx, curlingState.stone.vy);
       if (speed < 8) {
         curlingState.stone.vx = 0;
         curlingState.stone.vy = 0;
-        if (!curlingState.hasScore) {
-          curlingState.score = calcScore();
-          curlingState.hasScore = true;
-          curlingState.statusText = 'ショット終了！ リトライでもう一回遊べるよ。';
-          curlingState.resultText = buildCurlingResultText(curlingState.score);
+        if (curlingState.shotTaken) {
+          finalizeCurlingShot();
         }
       }
 
       renderCurling();
     }
 
-    function reflectCurlingStone() {
+    function resolveCurlingStoneCollision(pushFactor, dt) {
+      const radius = curlingState.arena.stoneRadius;
+      curlingState.placedStones.forEach((stone) => {
+        const dx = curlingState.stone.x - stone.x;
+        const dy = curlingState.stone.y - stone.y;
+        const distance = Math.hypot(dx, dy);
+        const minDistance = radius * 2;
+        if (distance <= 0.0001 || distance >= minDistance) return;
+        const nx = dx / distance;
+        const ny = dy / distance;
+        const overlap = minDistance - distance;
+        curlingState.stone.x += nx * overlap * 0.5;
+        curlingState.stone.y += ny * overlap * 0.5;
+        stone.x -= nx * overlap * 0.5;
+        stone.y -= ny * overlap * 0.5;
+        const impulse = Math.hypot(curlingState.stone.vx, curlingState.stone.vy) * 0.34 * pushFactor;
+        stone.vx = -nx * impulse;
+        stone.vy = -ny * impulse;
+        curlingState.stone.vx *= 0.7;
+        curlingState.stone.vy *= 0.7;
+      });
+
+      curlingState.placedStones.forEach((stone) => {
+        stone.vx *= Math.pow(0.98, dt * 60);
+        stone.vy *= Math.pow(0.98, dt * 60);
+        stone.x += stone.vx * dt;
+        stone.y += stone.vy * dt;
+        reflectSettledStone(stone);
+      });
+    }
+
+    function reflectSettledStone(stone) {
+      const radius = curlingState.arena.stoneRadius;
+      const maxX = curlingState.arena.width - radius - 18;
+      const minX = radius + 18;
+      const maxY = curlingState.arena.height - radius - 18;
+      const minY = radius + 18;
+      if (stone.x <= minX) {
+        stone.x = minX;
+        stone.vx = Math.abs(stone.vx) * 0.7;
+      } else if (stone.x >= maxX) {
+        stone.x = maxX;
+        stone.vx = -Math.abs(stone.vx) * 0.7;
+      }
+      if (stone.y <= minY) {
+        stone.y = minY;
+        stone.vy = Math.abs(stone.vy) * 0.7;
+      } else if (stone.y >= maxY) {
+        stone.y = maxY;
+        stone.vy = -Math.abs(stone.vy) * 0.7;
+      }
+    }
+
+    function reflectCurlingStone(bounceFactor) {
       const radius = curlingState.arena.stoneRadius;
       const maxX = curlingState.arena.width - radius - 18;
       const minX = radius + 18;
@@ -2987,41 +3127,81 @@
 
       if (curlingState.stone.x <= minX) {
         curlingState.stone.x = minX;
-        curlingState.stone.vx = Math.abs(curlingState.stone.vx) * 0.82;
+        curlingState.stone.vx = Math.abs(curlingState.stone.vx) * bounceFactor;
       } else if (curlingState.stone.x >= maxX) {
         curlingState.stone.x = maxX;
-        curlingState.stone.vx = -Math.abs(curlingState.stone.vx) * 0.82;
+        curlingState.stone.vx = -Math.abs(curlingState.stone.vx) * bounceFactor;
       }
 
       if (curlingState.stone.y <= minY) {
         curlingState.stone.y = minY;
-        curlingState.stone.vy = Math.abs(curlingState.stone.vy) * 0.82;
+        curlingState.stone.vy = Math.abs(curlingState.stone.vy) * bounceFactor;
       } else if (curlingState.stone.y >= maxY) {
         curlingState.stone.y = maxY;
-        curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * 0.82;
+        curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * bounceFactor;
       }
     }
 
+    function finalizeCurlingShot() {
+      const shotScore = calcScoreForPosition(curlingState.stone.x, curlingState.stone.y);
+      curlingState.shotScore = shotScore;
+      curlingState.score += shotScore;
+      curlingState.shotsLeft = Math.max(0, curlingState.shotsLeft - 1);
+      addSettledCurlingStone();
+
+      if (curlingState.shotsLeft > 0) {
+        curlingState.statusText = `この投は ${shotScore}点。次の石を配布！`;
+        curlingState.resultText = `合計 ${curlingState.score}点 / のこり ${curlingState.shotsLeft}投`;
+        prepareNextCurlingStone();
+        return;
+      }
+
+      curlingState.hasScore = true;
+      curlingState.gameFinished = true;
+      curlingState.statusText = `最終スコア ${curlingState.score}点。`;
+      curlingState.resultText = buildCurlingResultText(curlingState.score);
+    }
+
+    function addSettledCurlingStone() {
+      const settled = {
+        x: curlingState.stone.x,
+        y: curlingState.stone.y,
+        vx: curlingState.stone.vx,
+        vy: curlingState.stone.vy,
+        type: curlingState.stone.type
+      };
+      curlingState.placedStones.push(settled);
+      const el = document.createElement('div');
+      el.className = `curling-stone settled stone-${settled.type}`;
+      curlingSheet.appendChild(el);
+      curlingState.settledStoneElements.push(el);
+    }
+
     function buildCurlingResultText(score) {
-      if (score >= 90) return `すごい！ 中心近くまで寄せて ${score} 点！`;
-      if (score >= 65) return `いい感じ！ ハウスの中に収まって ${score} 点。`;
-      if (score >= 35) return `まずまず！ 次はもう少し中心をねらって ${score} 点。`;
-      return `外側ぎりぎりで ${score} 点。方向とパワーを調整して再挑戦！`;
+      if (score >= 120) return `高評価！ 合計 ${score} 点で大成功！`;
+      if (score >= 60) return `成功！ 合計 ${score} 点を達成。`;
+      return `今回は ${score} 点。次は反射や押し出しを活用しよう。`;
     }
 
     function renderCurling() {
       const visible = curlingState.active;
       curlingOverlay.classList.toggle('open', visible);
-      curlingHouse.style.left = `${curlingState.house.x}px`;
-      curlingHouse.style.top = `${curlingState.house.y}px`;
       curlingStone.style.left = `${curlingState.stone.x}px`;
       curlingStone.style.top = `${curlingState.stone.y}px`;
+      curlingStone.className = `curling-stone stone-${curlingState.stone.type}`;
       curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
       curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
       curlingScoreValue.textContent = String(curlingState.score);
-      curlingStatusText.textContent = curlingState.statusText;
+      curlingStatusText.textContent = `${curlingState.statusText} / 残り ${curlingState.shotsLeft}投`;
       curlingResultText.textContent = curlingState.resultText;
       curlingResultCard.classList.toggle('visible', curlingState.shotTaken || curlingState.hasScore);
+
+      curlingState.placedStones.forEach((stone, index) => {
+        const el = curlingState.settledStoneElements[index];
+        if (!el) return;
+        el.style.left = `${stone.x}px`;
+        el.style.top = `${stone.y}px`;
+      });
 
       const aimLength = 110;
       curlingAimLine.style.left = `${curlingState.stone.x}px`;
@@ -3033,7 +3213,7 @@
       curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.direction.y * aimLength}px`;
       curlingAimAnchor.classList.toggle('visible', curlingState.aiming && !curlingState.shotTaken);
 
-      curlingLaunchBtn.disabled = curlingState.shotTaken;
+      curlingLaunchBtn.disabled = curlingState.shotTaken || curlingState.gameFinished;
       curlingRetryBtn.disabled = !curlingState.active;
     }
 
