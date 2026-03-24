@@ -2838,9 +2838,9 @@
       gameMode = 'curling';
       curlingState = createCurlingState();
       curlingState.active = true;
+      curlingOverlay.classList.add('open');
       initializeCurlingLayout();
       prepareNextCurlingStone();
-      curlingOverlay.classList.add('open');
       renderCurling();
     }
 
@@ -2871,6 +2871,12 @@
 
     function initializeCurlingLayout() {
       const rect = curlingSheet.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        requestAnimationFrame(() => {
+          if (curlingState.active) initializeCurlingLayout();
+        });
+        return;
+      }
       curlingState.arena.width = rect.width;
       curlingState.arena.height = rect.height;
       curlingState.house.x = rect.width * 0.5;
