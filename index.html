@@ -1486,8 +1486,6 @@
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
     <div class="mood-badge" id="moodBadge">調子：のんびり</div>
     <div class="time-badge" id="timeBadge">ひる</div>
-    <button class="mode-toggle" id="modeToggleBtn" type="button">ミニゲームへ</button>
-
     <div class="play-area" id="playArea">
       <div class="stats">
         <h2>ようす</h2>
@@ -1599,6 +1597,13 @@
               <p>30秒でできる軽いミニゲーム。成功すると、たいりょくとなかよしが上がる。</p>
             </div>
             <button class="action-btn" id="startTrainingBtn">はじめる</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>魚キャッチ</h4>
+              <p>専用画面で起動する独立ミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startFishCatchTrainingBtn">開始</button>
           </div>
           <div class="option-card">
             <div>
@@ -1920,7 +1925,6 @@
     const statusBubble = document.getElementById('statusBubble');
     const moodBadge = document.getElementById('moodBadge');
     const timeBadge = document.getElementById('timeBadge');
-    const modeToggleBtn = document.getElementById('modeToggleBtn');
     const minigameOverlay = document.getElementById('minigameOverlay');
     const minigameArea = document.getElementById('minigameArea');
     const minigameFish = document.getElementById('minigameFish');
@@ -1951,6 +1955,7 @@
     const foodList = document.getElementById('foodList');
     const toyList = document.getElementById('toyList');
     const startTrainingBtn = document.getElementById('startTrainingBtn');
+    const startFishCatchTrainingBtn = document.getElementById('startFishCatchTrainingBtn');
     const trainingBox = document.getElementById('trainingBox');
     const trainingTarget = document.getElementById('trainingTarget');
     const trainingProgress = document.getElementById('trainingProgress');
@@ -2184,6 +2189,7 @@
       window.addEventListener('pointerup', onPetPointerUp);
       window.addEventListener('pointercancel', resetPetInteraction);
       startTrainingBtn.addEventListener('click', startTraining);
+      startFishCatchTrainingBtn.addEventListener('click', openMinigame);
       trainingTarget.addEventListener('click', onTrainingTap);
       startIceSlideTrainingBtn.addEventListener('click', startIceSlideMode);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
@@ -2243,14 +2249,7 @@
 
 
     function bindMinigameControls() {
-      if (!minigame || !modeToggleBtn) return;
-      modeToggleBtn.addEventListener('click', () => {
-        if (gameMode === 'minigame') {
-          closeMinigame();
-        } else {
-          openMinigame();
-        }
-      });
+      if (!minigame) return;
       if (minigameStartBtn) minigameStartBtn.addEventListener('click', () => minigame.start(minigameState));
       if (minigameRetryBtn) minigameRetryBtn.addEventListener('click', () => minigame.start(minigameState));
       if (minigameFish) minigameFish.addEventListener('click', () => minigame.catchFish(minigameState));
@@ -2261,6 +2260,9 @@
     function openMinigame() {
       if (!minigame || !minigameState) return;
       closePanels();
+      stopIceSlideMode();
+      stopCurling();
+      stopLookAwayMode();
       gameMode = 'minigame';
       minigame.prepare(minigameState);
       renderMinigame();
@@ -2276,12 +2278,10 @@
     function renderMinigame() {
       if (!minigame || !minigameState) return;
       minigame.render(minigameState, true);
-      if (modeToggleBtn) modeToggleBtn.textContent = 'メインへ';
     }
 
     function renderMain() {
       if (minigame && minigameState) minigame.render(minigameState, false);
-      if (modeToggleBtn) modeToggleBtn.textContent = 'ミニゲームへ';
     }
 
     function createIceSlideState() {
