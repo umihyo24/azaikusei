@@ -1409,6 +1409,42 @@
       display: block;
     }
 
+    .training-result-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.35);
+      padding: 16px;
+    }
+
+    .training-result-overlay.open {
+      display: flex;
+    }
+
+    .training-result-card {
+      width: min(92%, 420px);
+      background: #fff;
+      border: 3px solid #d5e2f1;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+      color: #31577a;
+    }
+
+    .training-result-card h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
+
+    .training-result-card p {
+      margin: 6px 0;
+      color: var(--soft);
+      line-height: 1.5;
+    }
+
     .night .game-shell,
     .night .game-shell .top-wave {
       transition: background 0.35s ease;
@@ -1732,6 +1768,17 @@
         </div>
       </div>
     </div>
+
+    <div class="training-result-overlay" id="trainingResultOverlay">
+      <div class="training-result-card">
+        <h3 id="trainingResultTitle">トレーニング結果</h3>
+        <p id="trainingResultSummary">結果を表示します。</p>
+        <p id="trainingRewardSummary">能力反映はありません。</p>
+        <div class="minigame-actions">
+          <button class="action-btn" id="trainingResultBackBtn" type="button">メインへ戻る</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="minigame.js"></script>
@@ -1974,6 +2021,11 @@
     const lookAwayOverlay = document.getElementById('lookAwayOverlay');
     const closeLookAwayBtn = document.getElementById('closeLookAwayBtn');
     const lookAwayBackBtn = document.getElementById('lookAwayBackBtn');
+    const trainingResultOverlay = document.getElementById('trainingResultOverlay');
+    const trainingResultTitle = document.getElementById('trainingResultTitle');
+    const trainingResultSummary = document.getElementById('trainingResultSummary');
+    const trainingRewardSummary = document.getElementById('trainingRewardSummary');
+    const trainingResultBackBtn = document.getElementById('trainingResultBackBtn');
     const curlingSheet = document.getElementById('curlingSheet');
     const curlingHouse = document.getElementById('curlingHouse');
     const curlingStone = document.getElementById('curlingStone');
@@ -2070,6 +2122,15 @@
     let sparringInput = 0;
     let sparringPointerX = null;
     let lookAwayMode = false;
+    let trainingResultState = null;
+
+    // ------------------------------
+    // training menu / minigame runner
+    // ------------------------------
+    const minigameRunner = {
+      activeMinigame: null,
+      startedAt: 0
+    };
 
     init();
 
@@ -2191,13 +2252,14 @@
       startTrainingBtn.addEventListener('click', startTraining);
       startFishCatchTrainingBtn.addEventListener('click', openMinigame);
       trainingTarget.addEventListener('click', onTrainingTap);
-      startIceSlideTrainingBtn.addEventListener('click', startIceSlideMode);
-      closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
-      startCurlingTrainingBtn.addEventListener('click', startCurling);
-      closeCurlingBtn.addEventListener('click', stopCurling);
-      startLookAwayTrainingBtn.addEventListener('click', startLookAwayMode);
-      closeLookAwayBtn.addEventListener('click', stopLookAwayMode);
-      lookAwayBackBtn.addEventListener('click', stopLookAwayMode);
+      startIceSlideTrainingBtn.addEventListener('click', () => startMinigame('iceSlide'));
+      closeIceSlideBtn.addEventListener('click', cancelMinigame);
+      startCurlingTrainingBtn.addEventListener('click', () => startMinigame('curling'));
+      closeCurlingBtn.addEventListener('click', cancelMinigame);
+      startLookAwayTrainingBtn.addEventListener('click', () => startMinigame('lookAway'));
+      closeLookAwayBtn.addEventListener('click', cancelMinigame);
+      lookAwayBackBtn.addEventListener('click', cancelMinigame);
+      trainingResultBackBtn.addEventListener('click', onTrainingResultBack);
       curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
       bindCurlingControls();
@@ -2284,6 +2346,225 @@
       if (minigame && minigameState) minigame.render(minigameState, false);
     }
 
+    const trainingMinigameModules = {
+      iceSlide: {
+        start() {
+          startIceSlideMode();
+        },
+        update(dt) {
+          updateIceSlide(dt);
+        },
+        render() {
+          renderIceSlide();
+        },
+        cancelResult(durationSec) {
+          return buildTrainingResult('iceSlide', false, 0, 'cancel', { durationSec });
+        }
+      },
+      curling: {
+        start() {
+          startCurling();
+        },
+        update(dt) {
+          updateCurling(dt);
+          if (curlingState.hasScore && !curlingState.resultCommitted) {
+            curlingState.resultCommitted = true;
+            finishMinigame(buildTrainingResult('curling', true, curlingState.score, scoreToPerformance(curlingState.score), {
+              durationSec: roundDuration((Date.now() - minigameRunner.startedAt) / 1000),
+              combo: 0
+            }));
+          }
+        },
+        render() {
+          renderCurling();
+        },
+        cancelResult(durationSec) {
+          return buildTrainingResult('curling', false, curlingState.score || 0, 'cancel', { durationSec });
+        }
+      },
+      lookAway: {
+        start() {
+          startLookAwayMode();
+        },
+        update() {},
+        render() {},
+        cancelResult(durationSec) {
+          return buildTrainingResult('lookAway', false, 0, 'cancel', { durationSec });
+        }
+      }
+    };
+
+    function startMinigame(gameId) {
+      const module = trainingMinigameModules[gameId];
+      if (!module || minigameRunner.activeMinigame) return;
+      closePanels();
+      hideTrainingResult();
+      minigameRunner.activeMinigame = gameId;
+      minigameRunner.startedAt = Date.now();
+      module.start();
+    }
+
+    function updateActiveMinigame(dt) {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return false;
+      const module = trainingMinigameModules[gameId];
+      if (!module) return false;
+      module.update(dt);
+      return true;
+    }
+
+    function renderActiveMinigame() {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return;
+      const module = trainingMinigameModules[gameId];
+      if (!module) return;
+      module.render();
+    }
+
+    function finishMinigame(result) {
+      if (!result || !result.gameId) return;
+      const reward = resolveTrainingReward(result.gameId, result);
+      applyTrainingReward(reward);
+      trainingResultState = { result, reward };
+      if (result.gameId === 'iceSlide') stopIceSlideMode();
+      if (result.gameId === 'curling') stopCurling();
+      if (result.gameId === 'lookAway') stopLookAwayMode();
+      minigameRunner.activeMinigame = null;
+      showTrainingResult(trainingResultState);
+      render();
+      saveState();
+    }
+
+    function cancelMinigame() {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return;
+      const module = trainingMinigameModules[gameId];
+      const durationSec = roundDuration((Date.now() - minigameRunner.startedAt) / 1000);
+      const cancelResult = module ? module.cancelResult(durationSec) : null;
+      if (cancelResult) {
+        finishMinigame(cancelResult);
+      }
+    }
+
+    // ------------------------------
+    // reward resolver / reward applier
+    // ------------------------------
+    function buildTrainingResult(gameId, cleared, score, performance, stats = {}) {
+      return {
+        gameId,
+        cleared,
+        score,
+        performance,
+        stats
+      };
+    }
+
+    function resolveTrainingReward(gameId, result) {
+      if (gameId === 'iceSlide') {
+        const perf = result.performance === 'great' ? 1.2 : result.performance === 'good' ? 1 : 0.7;
+        return {
+          stamina: -Math.round(8 * perf),
+          happiness: Math.round(9 * perf),
+          bond: Math.round(3 * perf),
+          growth: Math.round(2 * perf),
+          weight: -0.4 * perf,
+          logs: ['氷スライドで元気にあそんだ']
+        };
+      }
+      if (gameId === 'curling') {
+        const perf = result.score >= 80 ? 1.2 : result.score >= 50 ? 1 : 0.75;
+        return {
+          stamina: -Math.round(5 * perf),
+          happiness: Math.round(8 * perf),
+          bond: Math.round(2 * perf),
+          growth: Math.round(3 * perf),
+          weight: -0.2 * perf,
+          logs: ['カーリングで集中してあそんだ']
+        };
+      }
+      if (gameId === 'lookAway') {
+        return {
+          stamina: -2,
+          happiness: 4,
+          bond: 1,
+          growth: 1,
+          weight: -0.1,
+          logs: ['ホイはメンテナンス中だった']
+        };
+      }
+      return {
+        stamina: 0,
+        happiness: 0,
+        bond: 0,
+        growth: 0,
+        weight: 0,
+        logs: []
+      };
+    }
+
+    function applyTrainingReward(reward) {
+      if (!reward) return;
+      applyDelta(state, {
+        stamina: reward.stamina || 0,
+        happiness: reward.happiness || 0,
+        bond: reward.bond || 0,
+        growth: reward.growth || 0,
+        weight: reward.weight || 0
+      });
+      clampState();
+      updateStage();
+      (reward.logs || []).forEach((log) => {
+        state.lastStatus = log;
+        addLog(log);
+      });
+    }
+
+    // ------------------------------
+    // result screen
+    // ------------------------------
+    function showTrainingResult(payload) {
+      if (!payload) return;
+      trainingResultTitle.textContent = `結果: ${getGameLabel(payload.result.gameId)}`;
+      trainingResultSummary.textContent = `スコア ${payload.result.score} / 判定 ${payload.result.performance} / ${payload.result.cleared ? 'クリア' : '中断'}`;
+      trainingRewardSummary.textContent = `反映: 体力 ${formatSigned(payload.reward.stamina)} / ごきげん ${formatSigned(payload.reward.happiness)} / なかよし ${formatSigned(payload.reward.bond)} / 成長 ${formatSigned(payload.reward.growth)} / 体重 ${formatSigned(payload.reward.weight, 1)}`;
+      trainingResultOverlay.classList.add('open');
+    }
+
+    function hideTrainingResult() {
+      trainingResultOverlay.classList.remove('open');
+      trainingResultState = null;
+    }
+
+    function onTrainingResultBack() {
+      hideTrainingResult();
+      gameMode = 'main';
+      render();
+    }
+
+    function getGameLabel(gameId) {
+      return ({
+        iceSlide: '氷スライド',
+        curling: 'カーリング',
+        lookAway: 'ホイ'
+      })[gameId] || gameId;
+    }
+
+    function formatSigned(value, digits = 0) {
+      const fixed = Number(value || 0).toFixed(digits);
+      return Number(fixed) > 0 ? `+${fixed}` : fixed;
+    }
+
+    function roundDuration(sec) {
+      return Math.max(0, Math.round(sec * 10) / 10);
+    }
+
+    function scoreToPerformance(score) {
+      if (score >= 80) return 'great';
+      if (score >= 50) return 'good';
+      if (score > 0) return 'ok';
+      return 'cancel';
+    }
+
     function createIceSlideState() {
       return {
         x: 0,
@@ -2312,7 +2593,8 @@
         statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
         house: { x: 0, y: 0, rings: 120 },
         arena: { width: 0, height: 0, stoneRadius: 24 },
-        hasScore: false
+        hasScore: false,
+        resultCommitted: false
       };
     }
 
@@ -2477,7 +2759,6 @@
       gameMode = 'lookAway';
       lookAwayMode = true;
       lookAwayOverlay.classList.add('open');
-      state.lastStatus = 'ホイは現在メンテナンス中';
       render();
     }
 
@@ -3274,13 +3555,15 @@
     function loop(now) {
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
-      if (iceSlideMode) {
-        updateIceSlide(dt);
+      if (updateActiveMinigame(dt)) {
+        renderActiveMinigame();
+        render();
         requestAnimationFrame(loop);
         return;
       }
-      if (gameMode === 'curling' && curlingState.active) {
-        updateCurling(dt);
+      if (gameMode === 'minigame') {
+        updateMinigame(dt);
+        render();
         requestAnimationFrame(loop);
         return;
       }
