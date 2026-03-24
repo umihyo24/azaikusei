@@ -362,7 +362,7 @@
       right: 18px;
       bottom: 18px;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
       z-index: 4;
     }
@@ -1409,6 +1409,42 @@
       display: block;
     }
 
+    .training-result-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.35);
+      padding: 16px;
+    }
+
+    .training-result-overlay.open {
+      display: flex;
+    }
+
+    .training-result-card {
+      width: min(92%, 420px);
+      background: #fff;
+      border: 3px solid #d5e2f1;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+      color: #31577a;
+    }
+
+    .training-result-card h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
+
+    .training-result-card p {
+      margin: 6px 0;
+      color: var(--soft);
+      line-height: 1.5;
+    }
+
     .night .game-shell,
     .night .game-shell .top-wave {
       transition: background 0.35s ease;
@@ -1486,8 +1522,6 @@
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
     <div class="mood-badge" id="moodBadge">調子：のんびり</div>
     <div class="time-badge" id="timeBadge">ひる</div>
-    <button class="mode-toggle" id="modeToggleBtn" type="button">ミニゲームへ</button>
-
     <div class="play-area" id="playArea">
       <div class="stats">
         <h2>ようす</h2>
@@ -1563,7 +1597,6 @@
       <button class="nav-btn" data-panel="food">ごはん 🍚</button>
       <button class="nav-btn" data-panel="toy">おもちゃ ⚽</button>
       <button class="nav-btn" data-panel="training">トレーニング</button>
-      <button class="nav-btn" data-mode="lookAway">ホイ 👀</button>
       <button class="nav-btn" data-panel="settings">せってい</button>
     </div>
 
@@ -1600,6 +1633,34 @@
               <p>30秒でできる軽いミニゲーム。成功すると、たいりょくとなかよしが上がる。</p>
             </div>
             <button class="action-btn" id="startTrainingBtn">はじめる</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>魚キャッチ</h4>
+              <p>専用画面で起動する独立ミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startFishCatchTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>氷スライド</h4>
+              <p>専用画面で起動するテストミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startIceSlideTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>カーリング</h4>
+              <p>専用画面で1ショットを遊べる独立ミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startCurlingTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>ホイ</h4>
+              <p>専用画面で起動するミニゲーム（現在メンテ中）。</p>
+            </div>
+            <button class="action-btn" id="startLookAwayTrainingBtn">開始</button>
           </div>
         </div>
         <div class="training-box" id="trainingBox" hidden>
@@ -1640,20 +1701,6 @@
               <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">状態を最初からに戻す</div>
             </div>
             <button class="danger-btn" id="resetBtn">リセット</button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <strong>氷スライド</strong>
-              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">簡易テストモードを起動する</div>
-            </div>
-            <button class="action-btn" id="startIceSlideBtn">開始</button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <strong>カーリング</strong>
-              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">1ショットで中心をねらう独立ミニゲーム</div>
-            </div>
-            <button class="action-btn" id="startCurlingBtn">開始</button>
           </div>
         </div>
       </div>
@@ -1705,6 +1752,30 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="curling-launch-btn" id="curlingLaunchBtn">長押しでショット</button>
           <button class="curling-retry-btn" id="curlingRetryBtn">リトライ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="look-away-overlay" id="lookAwayOverlay">
+      <div class="look-away-card">
+        <div class="look-away-header">
+          <h3 class="look-away-title">ホイ</h3>
+          <button class="close-btn" id="closeLookAwayBtn" type="button">×</button>
+        </div>
+        <p class="look-away-subtext">このミニゲームは現在メンテナンス中です。</p>
+        <div class="look-away-footer">
+          <button class="action-btn" id="lookAwayBackBtn" type="button">メインへ戻る</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="training-result-overlay" id="trainingResultOverlay">
+      <div class="training-result-card">
+        <h3 id="trainingResultTitle">トレーニング結果</h3>
+        <p id="trainingResultSummary">結果を表示します。</p>
+        <p id="trainingRewardSummary">能力反映はありません。</p>
+        <div class="minigame-actions">
+          <button class="action-btn" id="trainingResultBackBtn" type="button">メインへ戻る</button>
         </div>
       </div>
     </div>
@@ -1901,6 +1972,18 @@
     const statusBubble = document.getElementById('statusBubble');
     const moodBadge = document.getElementById('moodBadge');
     const timeBadge = document.getElementById('timeBadge');
+    const minigameOverlay = document.getElementById('minigameOverlay');
+    const minigameArea = document.getElementById('minigameArea');
+    const minigameFish = document.getElementById('minigameFish');
+    const minigameScore = document.getElementById('minigameScore');
+    const minigameTime = document.getElementById('minigameTime');
+    const minigameResult = document.getElementById('minigameResult');
+    const minigameResultText = document.getElementById('minigameResultText');
+    const minigameStartScreen = document.getElementById('minigameStartScreen');
+    const minigameStartBtn = document.getElementById('minigameStartBtn');
+    const minigameRetryBtn = document.getElementById('minigameRetryBtn');
+    const minigameBackBtn = document.getElementById('minigameBackBtn');
+    const minigameResultBackBtn = document.getElementById('minigameResultBackBtn');
     const logList = document.getElementById('logList');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
@@ -1919,20 +2002,30 @@
     const foodList = document.getElementById('foodList');
     const toyList = document.getElementById('toyList');
     const startTrainingBtn = document.getElementById('startTrainingBtn');
+    const startFishCatchTrainingBtn = document.getElementById('startFishCatchTrainingBtn');
     const trainingBox = document.getElementById('trainingBox');
     const trainingTarget = document.getElementById('trainingTarget');
     const trainingProgress = document.getElementById('trainingProgress');
     const timeToggle = document.getElementById('timeToggle');
     const volumeSlider = document.getElementById('volumeSlider');
     const resetBtn = document.getElementById('resetBtn');
-    const startIceSlideBtn = document.getElementById('startIceSlideBtn');
+    const startIceSlideTrainingBtn = document.getElementById('startIceSlideTrainingBtn');
     const iceSlideOverlay = document.getElementById('iceSlideOverlay');
     const iceSlideArena = document.getElementById('iceSlideArena');
     const iceSlideSeal = document.getElementById('iceSlideSeal');
     const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
-    const startCurlingBtn = document.getElementById('startCurlingBtn');
+    const startCurlingTrainingBtn = document.getElementById('startCurlingTrainingBtn');
     const curlingOverlay = document.getElementById('curlingOverlay');
     const closeCurlingBtn = document.getElementById('closeCurlingBtn');
+    const startLookAwayTrainingBtn = document.getElementById('startLookAwayTrainingBtn');
+    const lookAwayOverlay = document.getElementById('lookAwayOverlay');
+    const closeLookAwayBtn = document.getElementById('closeLookAwayBtn');
+    const lookAwayBackBtn = document.getElementById('lookAwayBackBtn');
+    const trainingResultOverlay = document.getElementById('trainingResultOverlay');
+    const trainingResultTitle = document.getElementById('trainingResultTitle');
+    const trainingResultSummary = document.getElementById('trainingResultSummary');
+    const trainingRewardSummary = document.getElementById('trainingRewardSummary');
+    const trainingResultBackBtn = document.getElementById('trainingResultBackBtn');
     const curlingSheet = document.getElementById('curlingSheet');
     const curlingHouse = document.getElementById('curlingHouse');
     const curlingStone = document.getElementById('curlingStone');
@@ -1993,38 +2086,64 @@
       needed: 5
     };
 
-    let gameMode = 'main';
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
     let curlingState = createCurlingState();
     let pendingAction = null;
     let placedAction = null;
-    const minigame = window.createMinigameModule({
-      area: minigameArea,
-      overlay: minigameOverlay,
-      fish: minigameFish,
-      scoreLabel: minigameScore,
-      timeLabel: minigameTime,
-      resultLayer: minigameResult,
-      resultText: minigameResultText,
-      startScreen: minigameStartScreen
-    });
+    const minigame = (window.createMinigameModule && minigameArea && minigameOverlay)
+      ? window.createMinigameModule({
+          area: minigameArea,
+          overlay: minigameOverlay,
+          fish: minigameFish,
+          scoreLabel: minigameScore,
+          timeLabel: minigameTime,
+          resultLayer: minigameResult,
+          resultText: minigameResultText,
+          startScreen: minigameStartScreen
+        })
+      : null;
+    let minigameState = minigame ? minigame.createState() : null;
+    const petInteraction = {
+      active: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      distance: 0,
+      tapCount: 0,
+      lastTapTime: 0
+    };
+    const AUTO_BEHAVIOR_CHECK_MIN = 5;
+    const AUTO_BEHAVIOR_CHECK_MAX = 10;
+    const AUTO_BEHAVIOR_TRIGGER_RATE = 0.32;
+    let autoBehaviorTimer = randomAutoBehaviorInterval();
+    let sparringState = createSparringState();
+    let sparringInput = 0;
+    let sparringPointerX = null;
+    let lookAwayMode = false;
+    let trainingResultState = null;
+
+    // ------------------------------
+    // training menu / minigame runner
+    // ------------------------------
+    const minigameRunner = {
+      activeMinigame: null,
+      startedAt: 0
+    };
 
     init();
 
     function init() {
-      minigameState = minigame.createState();
+      if (minigame) minigameState = minigame.createState();
       placeSealInitially();
       renderFoodList();
       renderToyList();
       bindEvents();
       applyOfflineProgress();
       updateStage();
-      initializeSparringLayout();
       render();
       window.startIceSlideMode = startIceSlideMode;
-      window.startSparringMode = startSparringMode;
       requestAnimationFrame(loop);
       setInterval(saveState, 5000);
     }
@@ -2109,10 +2228,6 @@
     function bindEvents() {
       document.querySelectorAll('.nav-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-          if (btn.dataset.mode === 'lookAway') {
-            startLookAwayGame();
-            return;
-          }
           openPanel(btn.dataset.panel);
         });
       });
@@ -2135,15 +2250,20 @@
       window.addEventListener('pointerup', onPetPointerUp);
       window.addEventListener('pointercancel', resetPetInteraction);
       startTrainingBtn.addEventListener('click', startTraining);
+      startFishCatchTrainingBtn.addEventListener('click', openMinigame);
       trainingTarget.addEventListener('click', onTrainingTap);
-      startIceSlideBtn.addEventListener('click', startIceSlideMode);
-      collectedDropBtn.addEventListener('click', dropCollectedItem);
-      closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
-      startCurlingBtn.addEventListener('click', startCurling);
-      closeCurlingBtn.addEventListener('click', stopCurling);
+      startIceSlideTrainingBtn.addEventListener('click', () => startMinigame('iceSlide'));
+      closeIceSlideBtn.addEventListener('click', cancelMinigame);
+      startCurlingTrainingBtn.addEventListener('click', () => startMinigame('curling'));
+      closeCurlingBtn.addEventListener('click', cancelMinigame);
+      startLookAwayTrainingBtn.addEventListener('click', () => startMinigame('lookAway'));
+      closeLookAwayBtn.addEventListener('click', cancelMinigame);
+      lookAwayBackBtn.addEventListener('click', cancelMinigame);
+      trainingResultBackBtn.addEventListener('click', onTrainingResultBack);
       curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
       bindCurlingControls();
+      bindMinigameControls();
 
       timeToggle.checked = state.showTime;
       volumeSlider.value = state.volume;
@@ -2165,14 +2285,14 @@
         state = defaultState();
         training = { active: false, taps: 0, needed: 5 };
         gameMode = 'main';
-        minigameState = minigame.createState();
+        if (minigame) minigameState = minigame.createState();
         stopIceSlideMode();
         stopCurling();
+        stopLookAwayMode();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
         placeSealInitially();
-        initializeSparringLayout();
         renderFoodList();
         renderToyList();
         render();
@@ -2187,6 +2307,262 @@
           renderCurling();
         }
       });
+    }
+
+
+    function bindMinigameControls() {
+      if (!minigame) return;
+      if (minigameStartBtn) minigameStartBtn.addEventListener('click', () => minigame.start(minigameState));
+      if (minigameRetryBtn) minigameRetryBtn.addEventListener('click', () => minigame.start(minigameState));
+      if (minigameFish) minigameFish.addEventListener('click', () => minigame.catchFish(minigameState));
+      if (minigameBackBtn) minigameBackBtn.addEventListener('click', closeMinigame);
+      if (minigameResultBackBtn) minigameResultBackBtn.addEventListener('click', closeMinigame);
+    }
+
+    function openMinigame() {
+      if (!minigame || !minigameState) return;
+      closePanels();
+      stopIceSlideMode();
+      stopCurling();
+      stopLookAwayMode();
+      gameMode = 'minigame';
+      minigame.prepare(minigameState);
+      renderMinigame();
+    }
+
+    function closeMinigame() {
+      if (!minigame || !minigameState) return;
+      gameMode = 'main';
+      minigame.stop(minigameState);
+      renderMain();
+    }
+
+    function renderMinigame() {
+      if (!minigame || !minigameState) return;
+      minigame.render(minigameState, true);
+    }
+
+    function renderMain() {
+      if (minigame && minigameState) minigame.render(minigameState, false);
+    }
+
+    const trainingMinigameModules = {
+      iceSlide: {
+        start() {
+          startIceSlideMode();
+        },
+        update(dt) {
+          updateIceSlide(dt);
+        },
+        render() {
+          renderIceSlide();
+        },
+        cancelResult(durationSec) {
+          return buildTrainingResult('iceSlide', false, 0, 'cancel', { durationSec });
+        }
+      },
+      curling: {
+        start() {
+          startCurling();
+        },
+        update(dt) {
+          updateCurling(dt);
+          if (curlingState.hasScore && !curlingState.resultCommitted) {
+            curlingState.resultCommitted = true;
+            finishMinigame(buildTrainingResult('curling', true, curlingState.score, scoreToPerformance(curlingState.score), {
+              durationSec: roundDuration((Date.now() - minigameRunner.startedAt) / 1000),
+              combo: 0
+            }));
+          }
+        },
+        render() {
+          renderCurling();
+        },
+        cancelResult(durationSec) {
+          return buildTrainingResult('curling', false, curlingState.score || 0, 'cancel', { durationSec });
+        }
+      },
+      lookAway: {
+        start() {
+          startLookAwayMode();
+        },
+        update() {},
+        render() {},
+        cancelResult(durationSec) {
+          return buildTrainingResult('lookAway', false, 0, 'cancel', { durationSec });
+        }
+      }
+    };
+
+    function startMinigame(gameId) {
+      const module = trainingMinigameModules[gameId];
+      if (!module || minigameRunner.activeMinigame) return;
+      closePanels();
+      hideTrainingResult();
+      minigameRunner.activeMinigame = gameId;
+      minigameRunner.startedAt = Date.now();
+      module.start();
+    }
+
+    function updateActiveMinigame(dt) {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return false;
+      const module = trainingMinigameModules[gameId];
+      if (!module) return false;
+      module.update(dt);
+      return true;
+    }
+
+    function renderActiveMinigame() {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return;
+      const module = trainingMinigameModules[gameId];
+      if (!module) return;
+      module.render();
+    }
+
+    function finishMinigame(result) {
+      if (!result || !result.gameId) return;
+      const reward = resolveTrainingReward(result.gameId, result);
+      applyTrainingReward(reward);
+      trainingResultState = { result, reward };
+      if (result.gameId === 'iceSlide') stopIceSlideMode();
+      if (result.gameId === 'curling') stopCurling();
+      if (result.gameId === 'lookAway') stopLookAwayMode();
+      minigameRunner.activeMinigame = null;
+      showTrainingResult(trainingResultState);
+      render();
+      saveState();
+    }
+
+    function cancelMinigame() {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return;
+      const module = trainingMinigameModules[gameId];
+      const durationSec = roundDuration((Date.now() - minigameRunner.startedAt) / 1000);
+      const cancelResult = module ? module.cancelResult(durationSec) : null;
+      if (cancelResult) {
+        finishMinigame(cancelResult);
+      }
+    }
+
+    // ------------------------------
+    // reward resolver / reward applier
+    // ------------------------------
+    function buildTrainingResult(gameId, cleared, score, performance, stats = {}) {
+      return {
+        gameId,
+        cleared,
+        score,
+        performance,
+        stats
+      };
+    }
+
+    function resolveTrainingReward(gameId, result) {
+      if (gameId === 'iceSlide') {
+        const perf = result.performance === 'great' ? 1.2 : result.performance === 'good' ? 1 : 0.7;
+        return {
+          stamina: -Math.round(8 * perf),
+          happiness: Math.round(9 * perf),
+          bond: Math.round(3 * perf),
+          growth: Math.round(2 * perf),
+          weight: -0.4 * perf,
+          logs: ['氷スライドで元気にあそんだ']
+        };
+      }
+      if (gameId === 'curling') {
+        const perf = result.score >= 80 ? 1.2 : result.score >= 50 ? 1 : 0.75;
+        return {
+          stamina: -Math.round(5 * perf),
+          happiness: Math.round(8 * perf),
+          bond: Math.round(2 * perf),
+          growth: Math.round(3 * perf),
+          weight: -0.2 * perf,
+          logs: ['カーリングで集中してあそんだ']
+        };
+      }
+      if (gameId === 'lookAway') {
+        return {
+          stamina: -2,
+          happiness: 4,
+          bond: 1,
+          growth: 1,
+          weight: -0.1,
+          logs: ['ホイはメンテナンス中だった']
+        };
+      }
+      return {
+        stamina: 0,
+        happiness: 0,
+        bond: 0,
+        growth: 0,
+        weight: 0,
+        logs: []
+      };
+    }
+
+    function applyTrainingReward(reward) {
+      if (!reward) return;
+      applyDelta(state, {
+        stamina: reward.stamina || 0,
+        happiness: reward.happiness || 0,
+        bond: reward.bond || 0,
+        growth: reward.growth || 0,
+        weight: reward.weight || 0
+      });
+      clampState();
+      updateStage();
+      (reward.logs || []).forEach((log) => {
+        state.lastStatus = log;
+        addLog(log);
+      });
+    }
+
+    // ------------------------------
+    // result screen
+    // ------------------------------
+    function showTrainingResult(payload) {
+      if (!payload) return;
+      trainingResultTitle.textContent = `結果: ${getGameLabel(payload.result.gameId)}`;
+      trainingResultSummary.textContent = `スコア ${payload.result.score} / 判定 ${payload.result.performance} / ${payload.result.cleared ? 'クリア' : '中断'}`;
+      trainingRewardSummary.textContent = `反映: 体力 ${formatSigned(payload.reward.stamina)} / ごきげん ${formatSigned(payload.reward.happiness)} / なかよし ${formatSigned(payload.reward.bond)} / 成長 ${formatSigned(payload.reward.growth)} / 体重 ${formatSigned(payload.reward.weight, 1)}`;
+      trainingResultOverlay.classList.add('open');
+    }
+
+    function hideTrainingResult() {
+      trainingResultOverlay.classList.remove('open');
+      trainingResultState = null;
+    }
+
+    function onTrainingResultBack() {
+      hideTrainingResult();
+      gameMode = 'main';
+      render();
+    }
+
+    function getGameLabel(gameId) {
+      return ({
+        iceSlide: '氷スライド',
+        curling: 'カーリング',
+        lookAway: 'ホイ'
+      })[gameId] || gameId;
+    }
+
+    function formatSigned(value, digits = 0) {
+      const fixed = Number(value || 0).toFixed(digits);
+      return Number(fixed) > 0 ? `+${fixed}` : fixed;
+    }
+
+    function roundDuration(sec) {
+      return Math.max(0, Math.round(sec * 10) / 10);
+    }
+
+    function scoreToPerformance(score) {
+      if (score >= 80) return 'great';
+      if (score >= 50) return 'good';
+      if (score > 0) return 'ok';
+      return 'cancel';
     }
 
     function createIceSlideState() {
@@ -2217,7 +2593,8 @@
         statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
         house: { x: 0, y: 0, rings: 120 },
         arena: { width: 0, height: 0, stoneRadius: 24 },
-        hasScore: false
+        hasScore: false,
+        resultCommitted: false
       };
     }
 
@@ -2324,6 +2701,7 @@
     function startIceSlideMode() {
       closePanels();
       stopCurling();
+      stopLookAwayMode();
       gameMode = 'iceSlide';
       iceSlideMode = true;
       iceSlideInput = 0;
@@ -2358,6 +2736,7 @@
     function startCurling() {
       closePanels();
       stopIceSlideMode();
+      stopLookAwayMode();
       gameMode = 'curling';
       curlingState = createCurlingState();
       curlingState.active = true;
@@ -2371,6 +2750,23 @@
       curlingState = createCurlingState();
       curlingOverlay.classList.remove('open');
       renderCurling();
+    }
+
+    function startLookAwayMode() {
+      closePanels();
+      stopIceSlideMode();
+      stopCurling();
+      gameMode = 'lookAway';
+      lookAwayMode = true;
+      lookAwayOverlay.classList.add('open');
+      render();
+    }
+
+    function stopLookAwayMode() {
+      if (gameMode === 'lookAway') gameMode = 'main';
+      lookAwayMode = false;
+      lookAwayOverlay.classList.remove('open');
+      render();
     }
 
     function initializeCurlingLayout() {
@@ -3159,21 +3555,26 @@
     function loop(now) {
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
-      if (iceSlideMode) {
-        updateIceSlide(dt);
+      if (updateActiveMinigame(dt)) {
+        renderActiveMinigame();
+        render();
         requestAnimationFrame(loop);
         return;
       }
-      if (gameMode === 'curling' && curlingState.active) {
-        updateCurling(dt);
+      if (gameMode === 'minigame') {
+        updateMinigame(dt);
+        render();
         requestAnimationFrame(loop);
         return;
       }
       tickState(dt);
       tickSeal(dt);
+      render();
+      requestAnimationFrame(loop);
     }
 
     function updateMinigame(dt) {
+      if (!minigame || !minigameState) return;
       minigame.update(minigameState, dt);
     }
 
@@ -3420,6 +3821,7 @@
       // 時間経過で減衰・自然回復する値をまとめて更新する。
       applyDelta(state, buildPassiveStateDelta(dt));
       applyPassiveStateBonuses(dt);
+      collectPassiveItems(dt);
       handleAutoBehavior(dt);
       clampState();
       updateTimeTheme();
@@ -3814,6 +4216,12 @@
 
     function randomBetween(min, max) {
       return min + Math.random() * (max - min);
+    }
+
+
+    function startSparringMode() {
+      state.lastStatus = 'スパーリングは現在無効化中';
+      render();
     }
 
     function getCurrentStatusText() {
