@@ -289,7 +289,7 @@
       right: 18px;
       bottom: 18px;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       z-index: 4;
     }
@@ -544,6 +544,148 @@
       filter: drop-shadow(0 14px 14px rgba(30, 41, 59, 0.16));
     }
 
+    .look-away-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 14;
+      background: linear-gradient(180deg, rgba(227, 244, 255, 0.98) 0%, rgba(247, 251, 255, 0.99) 100%);
+    }
+
+    .look-away-overlay.open {
+      display: flex;
+    }
+
+    .look-away-card {
+      width: min(100%, 560px);
+      background: rgba(255,255,255,0.96);
+      border: 3px solid #d3e5f4;
+      border-radius: 28px;
+      box-shadow: 0 20px 42px rgba(15, 23, 42, 0.14);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .look-away-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .look-away-title {
+      margin: 0;
+      font-size: 28px;
+      color: #31577a;
+    }
+
+    .look-away-round {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #eef7ff;
+      border: 2px solid #d1e8fb;
+      color: #4a6b88;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .look-away-seal {
+      margin: 6px auto 12px;
+      width: 154px;
+      height: 154px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f2f8ff 55%, #ddecfb 100%);
+      border: 3px solid #d6e7f5;
+      box-shadow: inset 0 10px 18px rgba(255,255,255,0.9), 0 12px 24px rgba(148, 184, 215, 0.24);
+      font-size: 76px;
+    }
+
+    .look-away-enemy {
+      font-size: 18px;
+      font-weight: 700;
+      color: #466480;
+      margin-bottom: 10px;
+      min-height: 28px;
+    }
+
+    .look-away-result {
+      font-size: clamp(28px, 4vw, 38px);
+      font-weight: 800;
+      color: #ff7aa8;
+      margin: 12px 0 10px;
+      min-height: 48px;
+    }
+
+    .look-away-score {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .look-away-score-chip {
+      min-width: 112px;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: #f7fbff;
+      border: 2px solid #d8e9f8;
+      color: #4b647d;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .look-away-directions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .look-away-btn {
+      border: 3px solid #1f2937;
+      background: #fff;
+      color: #334155;
+      border-radius: 18px;
+      padding: 18px 12px;
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: 800;
+      transition: transform 0.08s ease, background 0.15s ease;
+    }
+
+    .look-away-btn:hover { background: #f2f8ff; }
+    .look-away-btn:active { transform: translateY(2px); }
+    .look-away-btn:disabled {
+      background: #edf3f8;
+      border-color: #94a3b8;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .look-away-footer {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .look-away-subtext {
+      color: var(--soft);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
     .night .game-shell,
     .night .game-shell .top-wave {
       transition: background 0.35s ease;
@@ -657,6 +799,7 @@
       <button class="nav-btn" data-panel="food">ごはん 🍚</button>
       <button class="nav-btn" data-panel="toy">おもちゃ ⚽</button>
       <button class="nav-btn" data-panel="training">トレーニング</button>
+      <button class="nav-btn" data-mode="lookAway">ホイ 👀</button>
       <button class="nav-btn" data-panel="settings">せってい</button>
     </div>
 
@@ -753,6 +896,33 @@
       <div class="ice-slide-arena" id="iceSlideArena">
         <div class="ice-slide-seal" id="iceSlideSeal" aria-hidden="true">
           <img src="seal.png" alt="" />
+        </div>
+      </div>
+    </div>
+
+    <div class="look-away-overlay" id="lookAwayOverlay">
+      <div class="look-away-card">
+        <div class="look-away-header">
+          <h3 class="look-away-title">あっちむいてホイ</h3>
+          <button class="ice-slide-close" id="closeLookAwayBtn">もどる</button>
+        </div>
+        <div class="look-away-round" id="lookAwayRound">ラウンド 1 / 3</div>
+        <div class="look-away-seal" id="lookAwayEnemyFace">🦭❔</div>
+        <div class="look-away-enemy" id="lookAwayEnemyText">あざらしが どっちを向くかな？</div>
+        <div class="look-away-result" id="lookAwayResultText">4ほうこう から えらぼう！</div>
+        <div class="look-away-score">
+          <div class="look-away-score-chip" id="lookAwayWins">0勝</div>
+          <div class="look-away-score-chip" id="lookAwayLosses">0敗</div>
+        </div>
+        <div class="look-away-subtext" id="lookAwaySummary">3本勝負で、同じ向きを当てたら きみの勝ち！</div>
+        <div class="look-away-directions" id="lookAwayDirections">
+          <button class="look-away-btn" data-look-away-direction="up">⬆️ うえ</button>
+          <button class="look-away-btn" data-look-away-direction="down">⬇️ した</button>
+          <button class="look-away-btn" data-look-away-direction="left">⬅️ ひだり</button>
+          <button class="look-away-btn" data-look-away-direction="right">➡️ みぎ</button>
+        </div>
+        <div class="look-away-footer">
+          <button class="action-btn" id="retryLookAwayBtn">リトライ</button>
         </div>
       </div>
     </div>
@@ -939,6 +1109,16 @@
     const iceSlideArena = document.getElementById('iceSlideArena');
     const iceSlideSeal = document.getElementById('iceSlideSeal');
     const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
+    const lookAwayOverlay = document.getElementById('lookAwayOverlay');
+    const lookAwayRound = document.getElementById('lookAwayRound');
+    const lookAwayEnemyFace = document.getElementById('lookAwayEnemyFace');
+    const lookAwayEnemyText = document.getElementById('lookAwayEnemyText');
+    const lookAwayResultText = document.getElementById('lookAwayResultText');
+    const lookAwayWins = document.getElementById('lookAwayWins');
+    const lookAwayLosses = document.getElementById('lookAwayLosses');
+    const lookAwaySummary = document.getElementById('lookAwaySummary');
+    const retryLookAwayBtn = document.getElementById('retryLookAwayBtn');
+    const closeLookAwayBtn = document.getElementById('closeLookAwayBtn');
 
     const ICE_SLIDE_CONFIG = {
       initialSpeed: 180,
@@ -970,9 +1150,18 @@
       needed: 5
     };
 
+    const LOOK_AWAY_DIRECTIONS = {
+      up: { label: 'うえ', emoji: '⬆️' },
+      down: { label: 'した', emoji: '⬇️' },
+      left: { label: 'ひだり', emoji: '⬅️' },
+      right: { label: 'みぎ', emoji: '➡️' }
+    };
+
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
+    let gameMode = 'main';
+    let lookAwayState = createLookAwayState();
     let pendingAction = null;
     let placedAction = null;
 
@@ -1045,7 +1234,13 @@
 
     function bindEvents() {
       document.querySelectorAll('.nav-btn').forEach((btn) => {
-        btn.addEventListener('click', () => openPanel(btn.dataset.panel));
+        btn.addEventListener('click', () => {
+          if (btn.dataset.mode === 'lookAway') {
+            startLookAwayGame();
+            return;
+          }
+          openPanel(btn.dataset.panel);
+        });
       });
 
       document.querySelectorAll('[data-close]').forEach((btn) => {
@@ -1064,6 +1259,11 @@
       trainingTarget.addEventListener('click', onTrainingTap);
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
+      retryLookAwayBtn.addEventListener('click', resetLookAwayGame);
+      closeLookAwayBtn.addEventListener('click', stopLookAwayGame);
+      document.querySelectorAll('[data-look-away-direction]').forEach((btn) => {
+        btn.addEventListener('click', () => chooseLookAwayDirection(btn.dataset.lookAwayDirection));
+      });
       bindIceSlideControls();
 
       timeToggle.checked = state.showTime;
@@ -1086,6 +1286,8 @@
         state = defaultState();
         training = { active: false, taps: 0, needed: 5 };
         stopIceSlideMode();
+        stopLookAwayGame();
+        lookAwayState = createLookAwayState();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
@@ -1109,6 +1311,99 @@
         angle: 0,
         debugTimer: 0
       };
+    }
+
+
+    function createLookAwayState() {
+      return {
+        active: false,
+        round: 1,
+        maxRounds: 3,
+        wins: 0,
+        losses: 0,
+        playerChoice: null,
+        enemyChoice: null,
+        resultText: ''
+      };
+    }
+
+    function startLookAwayGame() {
+      closePanels();
+      stopIceSlideMode();
+      gameMode = 'lookAway';
+      lookAwayState = createLookAwayState();
+      lookAwayState.active = true;
+      lookAwayState.resultText = '4ほうこう から えらぼう！';
+      renderLookAway();
+    }
+
+    function chooseLookAwayDirection(direction) {
+      if (gameMode !== 'lookAway' || !lookAwayState.active || !LOOK_AWAY_DIRECTIONS[direction]) return;
+      lookAwayState.playerChoice = direction;
+      resolveLookAwayRound();
+    }
+
+    function resolveLookAwayRound() {
+      if (!lookAwayState.playerChoice) return;
+      const directions = Object.keys(LOOK_AWAY_DIRECTIONS);
+      const enemyChoice = randomFrom(directions);
+      const isWin = lookAwayState.playerChoice === enemyChoice;
+
+      lookAwayState.enemyChoice = enemyChoice;
+      if (isWin) {
+        lookAwayState.wins += 1;
+        lookAwayState.resultText = 'やった！';
+      } else {
+        lookAwayState.losses += 1;
+        lookAwayState.resultText = 'ざんねん';
+      }
+
+      if (lookAwayState.round >= lookAwayState.maxRounds) {
+        lookAwayState.active = false;
+      } else {
+        lookAwayState.round += 1;
+      }
+
+      renderLookAway();
+    }
+
+    function renderLookAway() {
+      const enemy = lookAwayState.enemyChoice ? LOOK_AWAY_DIRECTIONS[lookAwayState.enemyChoice] : null;
+      const currentRound = Math.min(lookAwayState.round, lookAwayState.maxRounds);
+      const finished = !lookAwayState.active && (lookAwayState.wins + lookAwayState.losses) >= lookAwayState.maxRounds;
+      lookAwayOverlay.classList.toggle('open', gameMode === 'lookAway');
+      lookAwayRound.textContent = `ラウンド ${currentRound} / ${lookAwayState.maxRounds}`;
+      lookAwayEnemyFace.textContent = enemy ? `🦭${enemy.emoji}` : '🦭❔';
+      lookAwayEnemyText.textContent = enemy
+        ? `あいての あざらしは ${enemy.label} を向いたよ ${enemy.emoji}`
+        : 'あざらしが どっちを向くかな？';
+      lookAwayResultText.textContent = lookAwayState.resultText || '4ほうこう から えらぼう！';
+      lookAwayWins.textContent = `${lookAwayState.wins}勝`;
+      lookAwayLosses.textContent = `${lookAwayState.losses}敗`;
+      lookAwaySummary.textContent = finished
+        ? `おしまい！ ${lookAwayState.wins}勝 ${lookAwayState.losses}敗 だったよ。もういっかい あそぶ？`
+        : lookAwayState.playerChoice && enemy
+          ? `きみは ${LOOK_AWAY_DIRECTIONS[lookAwayState.playerChoice].label}、あいては ${enemy.label}！`
+          : '3本勝負で、同じ向きを当てたら きみの勝ち！';
+
+      document.querySelectorAll('[data-look-away-direction]').forEach((button) => {
+        button.disabled = finished;
+      });
+    }
+
+    function resetLookAwayGame() {
+      if (gameMode !== 'lookAway') {
+        gameMode = 'lookAway';
+      }
+      lookAwayState = createLookAwayState();
+      lookAwayState.active = true;
+      lookAwayState.resultText = '4ほうこう から えらぼう！';
+      renderLookAway();
+    }
+
+    function stopLookAwayGame() {
+      gameMode = 'main';
+      lookAwayOverlay.classList.remove('open');
     }
 
     function bindIceSlideControls() {
@@ -1604,6 +1899,11 @@
       lastTime = now;
       if (iceSlideMode) {
         updateIceSlide(dt);
+        requestAnimationFrame(loop);
+        return;
+      }
+      if (gameMode === 'lookAway') {
+        renderLookAway();
         requestAnimationFrame(loop);
         return;
       }
