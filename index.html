@@ -2212,6 +2212,12 @@
 
     function init() {
       if (minigame) minigameState = minigame.createState();
+      gameMode = 'main';
+      minigameRunner.activeMinigame = null;
+      iceSlideOverlay.classList.remove('open');
+      curlingOverlay.classList.remove('open');
+      lookAwayOverlay.classList.remove('open');
+      trainingResultOverlay.classList.remove('open');
       placeSealInitially();
       renderFoodList();
       renderToyList();
@@ -2916,6 +2922,8 @@
         el.style.height = `${size}px`;
         el.style.left = `${target.x}px`;
         el.style.top = `${target.y}px`;
+        el.style.opacity = idx === 0 ? '0.95' : idx === 1 ? '0.9' : '0.88';
+        el.style.borderColor = idx === 0 ? 'rgba(59,130,246,0.45)' : idx === 1 ? 'rgba(14,165,233,0.48)' : 'rgba(244,63,94,0.5)';
       });
     }
 
@@ -2934,8 +2942,7 @@
       curlingState.direction = { x: 0, y: -1 };
       curlingState.directionAngle = -Math.PI / 2;
       curlingState.stone.type = randomFrom(Object.keys(CURLING_STONE_TYPES));
-      curlingState.statusText = `${curlingState.shotsTotal - curlingState.shotsLeft + 1}/${curlingState.shotsTotal}投目 (${curlingState.stone.type})`;
-      curlingState.resultText = 'ドラッグで方向を決めて、長押しでショット。';
+      curlingState.resultText = `${curlingState.shotsTotal - curlingState.shotsLeft + 1}/${curlingState.shotsTotal}投目 (${curlingState.stone.type})`;
     }
 
     function onCurlingPointerDown(event) {
@@ -3192,7 +3199,7 @@
       curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
       curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
       curlingScoreValue.textContent = String(curlingState.score);
-      curlingStatusText.textContent = `${curlingState.statusText} / 残り ${curlingState.shotsLeft}投`;
+      curlingStatusText.textContent = `${curlingState.statusText}（残り ${curlingState.shotsLeft}投）`;
       curlingResultText.textContent = curlingState.resultText;
       curlingResultCard.classList.toggle('visible', curlingState.shotTaken || curlingState.hasScore);
 
