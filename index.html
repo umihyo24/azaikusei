@@ -1357,6 +1357,7 @@
       border: 4px solid rgba(255,255,255,0.92);
       box-shadow: 0 10px 24px rgba(59, 130, 246, 0.15);
       pointer-events: none;
+      z-index: 6;
     }
 
     .curling-house::after {
@@ -1382,6 +1383,7 @@
       border: 3px solid rgba(255,255,255,0.92);
       box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
       pointer-events: none;
+      z-index: 4;
     }
 
     .curling-stone.stone-light::before { background: #22c1c3; }
@@ -1485,6 +1487,7 @@
       margin: 6px 0;
       color: var(--soft);
       line-height: 1.5;
+      white-space: pre-line;
     }
 
     .night .game-shell,
@@ -2511,7 +2514,6 @@
       applyTrainingReward(reward);
       trainingResultState = { result, reward };
       if (result.gameId === 'iceSlide') stopIceSlideMode();
-      if (result.gameId === 'curling') stopCurling();
       if (result.gameId === 'lookAway') stopLookAwayMode();
       minigameRunner.activeMinigame = null;
       showTrainingResult(trainingResultState);
@@ -2609,8 +2611,8 @@
     function showTrainingResult(payload) {
       if (!payload) return;
       trainingResultTitle.textContent = `結果: ${getGameLabel(payload.result.gameId)}`;
-      trainingResultSummary.textContent = `スコア ${payload.result.score} / 判定 ${payload.result.performance} / ${payload.result.cleared ? 'クリア' : '中断'}`;
-      trainingRewardSummary.textContent = `反映: 体力 ${formatSigned(payload.reward.stamina)} / ごきげん ${formatSigned(payload.reward.happiness)} / なかよし ${formatSigned(payload.reward.bond)} / 成長 ${formatSigned(payload.reward.growth)} / 体重 ${formatSigned(payload.reward.weight, 1)}`;
+      trainingResultSummary.textContent = `スコア：${payload.result.score}\n評価：${toPerformanceLabel(payload.result.performance)}\n結果：${payload.result.cleared ? 'クリア' : '中断'}`;
+      trainingRewardSummary.textContent = buildRewardNarration(payload.reward);
       trainingResultOverlay.classList.add('open');
     }
 
@@ -2620,6 +2622,9 @@
     }
 
     function onTrainingResultBack() {
+      if (trainingResultState?.result?.gameId === 'curling') {
+        stopCurling();
+      }
       hideTrainingResult();
       gameMode = 'main';
       render();
@@ -2636,6 +2641,25 @@
     function formatSigned(value, digits = 0) {
       const fixed = Number(value || 0).toFixed(digits);
       return Number(fixed) > 0 ? `+${fixed}` : fixed;
+    }
+
+    function toPerformanceLabel(performance) {
+      return ({
+        great: 'すごい',
+        good: 'いい感じ',
+        ok: 'まずまず',
+        cancel: '中断'
+      })[performance] || 'ふつう';
+    }
+
+    function buildRewardNarration(reward) {
+      const lines = [];
+      if ((reward.stamina || 0) < 0) lines.push('元気がすこし減った');
+      if ((reward.happiness || 0) > 0) lines.push('ごきげんが上がった');
+      if ((reward.bond || 0) > 0) lines.push('なかよしが深まった');
+      if ((reward.growth || 0) > 0) lines.push('成長を感じた');
+      if ((reward.weight || 0) < 0) lines.push('体が引きしまった');
+      return lines.length ? lines.join('\n') : '変化はなかった';
     }
 
     function roundDuration(sec) {
@@ -3093,16 +3117,16 @@
         curlingState.stone.y += ny * overlap * 0.5;
         stone.x -= nx * overlap * 0.5;
         stone.y -= ny * overlap * 0.5;
-        const impulse = Math.hypot(curlingState.stone.vx, curlingState.stone.vy) * 0.34 * pushFactor;
+        const impulse = Math.hypot(curlingState.stone.vx, curlingState.stone.vy) * 0.58 * pushFactor;
         stone.vx = -nx * impulse;
         stone.vy = -ny * impulse;
-        curlingState.stone.vx *= 0.7;
-        curlingState.stone.vy *= 0.7;
+        curlingState.stone.vx *= 0.9;
+        curlingState.stone.vy *= 0.9;
       });
 
       curlingState.placedStones.forEach((stone) => {
-        stone.vx *= Math.pow(0.98, dt * 60);
-        stone.vy *= Math.pow(0.98, dt * 60);
+        stone.vx *= Math.pow(0.994, dt * 60);
+        stone.vy *= Math.pow(0.994, dt * 60);
         stone.x += stone.vx * dt;
         stone.y += stone.vy * dt;
         reflectSettledStone(stone);
@@ -3117,17 +3141,17 @@
       const minY = radius + 18;
       if (stone.x <= minX) {
         stone.x = minX;
-        stone.vx = Math.abs(stone.vx) * 0.7;
+        stone.vx = Math.abs(stone.vx) * 0.88;
       } else if (stone.x >= maxX) {
         stone.x = maxX;
-        stone.vx = -Math.abs(stone.vx) * 0.7;
+        stone.vx = -Math.abs(stone.vx) * 0.88;
       }
       if (stone.y <= minY) {
         stone.y = minY;
-        stone.vy = Math.abs(stone.vy) * 0.7;
+        stone.vy = Math.abs(stone.vy) * 0.88;
       } else if (stone.y >= maxY) {
         stone.y = maxY;
-        stone.vy = -Math.abs(stone.vy) * 0.7;
+        stone.vy = -Math.abs(stone.vy) * 0.88;
       }
     }
 
@@ -3819,6 +3843,12 @@
     function loop(now) {
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
+      if (trainingResultOverlay.classList.contains('open') && gameMode === 'curling') {
+        renderCurling();
+        render();
+        requestAnimationFrame(loop);
+        return;
+      }
       if (updateActiveMinigame(dt)) {
         renderActiveMinigame();
         render();
