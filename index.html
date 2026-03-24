@@ -2703,7 +2703,7 @@
         direction: { x: 0, y: -1 },
         directionAngle: -Math.PI / 2,
         resultText: 'まだ投げていないよ。',
-        statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
+        statusText: '3〜5投で合計スコアを狙おう。',
         house: { x: 0, y: 0, rings: 120 },
         arena: { width: 0, height: 0, stoneRadius: 24 },
         hasScore: false,
@@ -3170,6 +3170,26 @@
         curlingState.stone.y = maxY;
         curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * bounceFactor;
       }
+
+      curlingState.hasScore = true;
+      curlingState.gameFinished = true;
+      curlingState.statusText = `最終スコア ${curlingState.score}点。`;
+      curlingState.resultText = buildCurlingResultText(curlingState.score);
+    }
+
+    function addSettledCurlingStone() {
+      const settled = {
+        x: curlingState.stone.x,
+        y: curlingState.stone.y,
+        vx: curlingState.stone.vx,
+        vy: curlingState.stone.vy,
+        type: curlingState.stone.type
+      };
+      curlingState.placedStones.push(settled);
+      const el = document.createElement('div');
+      el.className = `curling-stone settled stone-${settled.type}`;
+      curlingSheet.appendChild(el);
+      curlingState.settledStoneElements.push(el);
     }
 
     function finalizeCurlingShot() {
