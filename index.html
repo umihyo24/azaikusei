@@ -1126,12 +1126,16 @@
       needed: 5
     };
 
+    const AUTO_BEHAVIOR_CHECK_MIN = 3;
+    const AUTO_BEHAVIOR_CHECK_MAX = 6;
+    const AUTO_BEHAVIOR_TRIGGER_RATE = 0.02;
+
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
     let pendingAction = null;
     let placedAction = null;
-    let petInteraction = createPetInteractionState();
+    let autoBehaviorTimer = randomAutoBehaviorInterval();
 
     init();
 
@@ -2044,9 +2048,57 @@
       // 時間経過で減衰・自然回復する値をまとめて更新する。
       applyDelta(state, buildPassiveStateDelta(dt));
       applyPassiveStateBonuses(dt);
-      collectPassiveItems(dt);
+      handleAutoBehavior(dt);
       clampState();
       updateTimeTheme();
+    }
+
+    function randomAutoBehaviorInterval() {
+      return AUTO_BEHAVIOR_CHECK_MIN + Math.random() * (AUTO_BEHAVIOR_CHECK_MAX - AUTO_BEHAVIOR_CHECK_MIN);
+    }
+
+    function handleAutoBehavior(dt) {
+      autoBehaviorTimer -= dt;
+      if (autoBehaviorTimer > 0) return;
+
+      autoBehaviorTimer = randomAutoBehaviorInterval();
+      if (pendingAction || seal.actionTarget) return;
+      if (seal.mode !== 'idle') return;
+      if (Math.random() >= AUTO_BEHAVIOR_TRIGGER_RATE) return;
+
+      const roll = Math.random();
+      let eventResult = null;
+
+      if (roll < 0.34) {
+        eventResult = {
+          delta: { happiness: 2 },
+          statusText: 'ちょっと遊んだ',
+          floatText: '+2 ごきげん'
+        };
+      } else if (roll < 0.68) {
+        eventResult = {
+          delta: { stamina: 3 },
+          statusText: 'うたたねした',
+          floatText: '+3 たいりょく'
+        };
+      } else if (roll < 0.94) {
+        eventResult = {
+          delta: {},
+          statusText: 'ぼーっとしている',
+          floatText: 'ぼーっ'
+        };
+      } else {
+        eventResult = {
+          delta: { fish: 1 },
+          statusText: '魚を見つけた',
+          floatText: '+1 さかな'
+        };
+      }
+
+      applyDelta(state, eventResult.delta);
+      state.lastStatus = eventResult.statusText;
+      if (typeof addLog === 'function') addLog(eventResult.statusText);
+      if (eventResult.floatText) spawnFloatText(null, null, eventResult.floatText);
     }
 
     function buildPassiveStateDelta(dt) {
