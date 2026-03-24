@@ -505,6 +505,40 @@
       color: var(--soft);
     }
 
+    .log-panel {
+      position: absolute;
+      right: 20px;
+      top: 132px;
+      z-index: 3;
+      width: 220px;
+      padding: 12px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 16px;
+      border: 2px solid #d5e2f1;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .log-panel h2 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    .log-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--soft);
+    }
+
+    .log-list li {
+      line-height: 1.4;
+      min-height: 1.4em;
+      word-break: break-word;
+    }
+
     .ice-slide-overlay {
       position: absolute;
       inset: 0;
@@ -625,11 +659,9 @@
         max-width: 180px;
       }
 
-      .collected-drop-btn {
-        right: 10px;
-        top: 126px;
-        padding: 7px 10px;
-        font-size: 12px;
+      .log-panel {
+        width: 180px;
+        top: 136px;
       }
 
       .bottom-nav {
@@ -662,9 +694,12 @@
 
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
     <div class="time-badge" id="timeBadge">ひる</div>
-    <button class="collected-drop-btn" id="collectedDropBtn" type="button" aria-label="集めた食材を落とす">
-      <span>ドロップ <strong id="collectedSummary">🐟0 / 🐚0</strong></span>
-    </button>
+    <div class="log-panel" aria-live="polite">
+      <h2>こうどうログ</h2>
+      <ul class="log-list" id="logList">
+        <li>まだログはありません</li>
+      </ul>
+    </div>
 
     <div class="play-area" id="playArea">
       <div class="stats">
@@ -811,6 +846,8 @@
   <script>
     const SAVE_KEY = 'seal-game-save-v2';
     const SAVE_VERSION = 2;
+    const MAX_LOGS = 8;
+    const VISIBLE_LOGS = 5;
 
     const PERSONALITY_PRESETS = {
       playful: { label: 'あそび好き', toySpeedBonus: 0.24, toyMoodBonus: 1.2 },
@@ -824,6 +861,7 @@
         version: SAVE_VERSION,
         lastTick: Date.now(),
         lastStatus: 'のんびりしている',
+        logs: [],
 
         // core resources: 日常的に増減する基本リソース
         fish: 30,
@@ -992,8 +1030,7 @@
     const stageValue = document.getElementById('stageValue');
     const statusBubble = document.getElementById('statusBubble');
     const timeBadge = document.getElementById('timeBadge');
-    const collectedDropBtn = document.getElementById('collectedDropBtn');
-    const collectedSummary = document.getElementById('collectedSummary');
+    const logList = document.getElementById('logList');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
     const staminaBar = document.getElementById('staminaBar');
@@ -1096,13 +1133,20 @@
       if (!loaded || typeof loaded !== 'object') return fallback;
       const normalized = { ...fallback, ...loaded };
       normalized.version = typeof loaded.version === 'number' ? loaded.version : fallback.version;
-      normalized.collectedItems = {
-        ...fallback.collectedItems,
-        ...(loaded.collectedItems && typeof loaded.collectedItems === 'object' ? loaded.collectedItems : {})
-      };
-      normalized.collectedItems.fish = Math.max(0, Number(normalized.collectedItems.fish) || 0);
-      normalized.collectedItems.shell = Math.max(0, Number(normalized.collectedItems.shell) || 0);
+      normalized.logs = Array.isArray(loaded.logs)
+        ? loaded.logs
+            .filter((entry) => entry && typeof entry.text === 'string' && typeof entry.time === 'number')
+            .slice(-MAX_LOGS)
+        : fallback.logs;
       return normalized;
+    }
+
+    function addLog(text) {
+      if (!text) return;
+      state.logs.push({ text, time: Date.now() });
+      if (state.logs.length > MAX_LOGS) {
+        state.logs.splice(0, state.logs.length - MAX_LOGS);
+      }
     }
 
     function applyDelta(targetState, delta) {
@@ -1127,6 +1171,7 @@
         applyDelta(state, buildOfflineDelta(elapsedSec));
         clampState();
         state.lastStatus = `おるすばん中に ${Math.floor(elapsedSec / 6)} 秒ぶん すごした`;
+        addLog(state.lastStatus);
       }
       state.lastTick = now;
     }
@@ -1588,12 +1633,14 @@
         return;
       }
       applyResult(buildActionResult(action, state));
+      addLog(state.lastStatus);
       finalizeResolvedAction();
     }
 
     function resolveToyAction(action) {
       // 遊び解決: 成否や疲労分岐も buildActionResult 側に寄せる。
       applyResult(buildActionResult(action, state));
+      addLog(state.lastStatus);
       finalizeResolvedAction();
     }
 
@@ -1679,6 +1726,7 @@
         'しっぽを ぱたぱた している',
         'なでられて まんぞくそう'
       ]);
+      addLog(state.lastStatus);
       updateStage();
       clampState();
       sealButton.classList.add('is-pet');
@@ -1714,6 +1762,7 @@
         applyDelta(state, buildTrainingSuccessDelta());
         state.trainingCount += 1;
         state.lastStatus = 'トレーニング成功。ちょっと たくましく なった';
+        addLog(state.lastStatus);
         updateStage();
         clampState();
         trainingBox.hidden = true;
@@ -2046,6 +2095,7 @@
       fishValue.textContent = Math.floor(state.fish);
       stageValue.textContent = getStageLabel();
       statusBubble.textContent = state.lastStatus;
+      renderLogs();
       hungerBar.style.width = `${state.hunger}%`;
       happyBar.style.width = `${state.happiness}%`;
       staminaBar.style.width = `${state.stamina}%`;
@@ -2060,6 +2110,17 @@
       collectedSummary.textContent = `🐟${state.collectedItems.fish} / 🐚${state.collectedItems.shell}`;
       collectedDropBtn.disabled = !getAvailableCollectedItems().length || Boolean(pendingAction);
       playArea.classList.toggle('is-drop-mode', Boolean(pendingAction && !placedAction));
+    }
+
+    function renderLogs() {
+      const recentLogs = state.logs.slice(-VISIBLE_LOGS).reverse();
+      if (!recentLogs.length) {
+        logList.innerHTML = '<li>まだログはありません</li>';
+        return;
+      }
+      logList.innerHTML = recentLogs
+        .map((entry) => `<li>${entry.text}</li>`)
+        .join('');
     }
 
     function spawnFloatText(clientX, clientY, text) {
