@@ -194,6 +194,43 @@
       border-radius: 16px;
       border: 2px solid #d5e2f1;
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      display: none;
+    }
+
+    .quick-status {
+      position: absolute;
+      left: 20px;
+      bottom: 16px;
+      z-index: 3;
+      width: 240px;
+      padding: 12px;
+      background: rgba(255,255,255,0.88);
+      border-radius: 16px;
+      border: 2px solid #d5e2f1;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 8px;
+    }
+
+    .quick-status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #4a617c;
+    }
+
+    .quick-status-row strong {
+      font-size: 13px;
+      color: #274968;
+    }
+
+    .health-comment {
+      margin-top: 2px;
+      padding-top: 8px;
+      border-top: 1px solid #d9e6f3;
+      font-size: 12px;
+      color: #5f7691;
     }
 
     .stats h2 {
@@ -362,7 +399,7 @@
       right: 18px;
       bottom: 18px;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
       z-index: 4;
     }
@@ -1347,6 +1384,11 @@
       pointer-events: none;
     }
 
+    .curling-stone.stone-light::before { background: #22c1c3; }
+    .curling-stone.stone-normal::before { background: #ef4444; }
+    .curling-stone.stone-heavy::before { background: #1f2937; }
+    .curling-stone.settled { opacity: 0.92; }
+
     .curling-stone::before {
       content: "";
       position: absolute;
@@ -1407,6 +1449,42 @@
 
     .curling-result.visible {
       display: block;
+    }
+
+    .training-result-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.35);
+      padding: 16px;
+    }
+
+    .training-result-overlay.open {
+      display: flex;
+    }
+
+    .training-result-card {
+      width: min(92%, 420px);
+      background: #fff;
+      border: 3px solid #d5e2f1;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+      color: #31577a;
+    }
+
+    .training-result-card h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
+    }
+
+    .training-result-card p {
+      margin: 6px 0;
+      color: var(--soft);
+      line-height: 1.5;
     }
 
     .night .game-shell,
@@ -1486,8 +1564,6 @@
     <div class="status-bubble" id="statusBubble">のんびりしている</div>
     <div class="mood-badge" id="moodBadge">調子：のんびり</div>
     <div class="time-badge" id="timeBadge">ひる</div>
-    <button class="mode-toggle" id="modeToggleBtn" type="button">ミニゲームへ</button>
-
     <div class="play-area" id="playArea">
       <div class="stats">
         <h2>ようす</h2>
@@ -1516,6 +1592,12 @@
           <div class="bar bar-weight"><span id="weightBar"></span></div>
           <strong id="weightValue">38</strong>
         </div>
+      </div>
+      <div class="quick-status" id="quickStatus">
+        <div class="quick-status-row"><span>まんぷく</span><strong id="mainHungerState">ふつう</strong></div>
+        <div class="quick-status-row"><span>ごきげん</span><strong id="mainHappyState">ふつう</strong></div>
+        <div class="quick-status-row"><span>元気</span><strong id="mainStaminaState">ふつう</strong></div>
+        <div class="health-comment" id="healthComment">ようすを見ている。</div>
       </div>
 
       <div class="seal-shadow" id="sealShadow"></div>
@@ -1563,7 +1645,6 @@
       <button class="nav-btn" data-panel="food">ごはん 🍚</button>
       <button class="nav-btn" data-panel="toy">おもちゃ ⚽</button>
       <button class="nav-btn" data-panel="training">トレーニング</button>
-      <button class="nav-btn" data-mode="lookAway">ホイ 👀</button>
       <button class="nav-btn" data-panel="settings">せってい</button>
     </div>
 
@@ -1600,6 +1681,34 @@
               <p>30秒でできる軽いミニゲーム。成功すると、たいりょくとなかよしが上がる。</p>
             </div>
             <button class="action-btn" id="startTrainingBtn">はじめる</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>魚キャッチ</h4>
+              <p>専用画面で起動する独立ミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startFishCatchTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>氷スライド</h4>
+              <p>専用画面で起動するテストミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startIceSlideTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>カーリング</h4>
+              <p>専用画面で1ショットを遊べる独立ミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startCurlingTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>ホイ</h4>
+              <p>専用画面で起動するミニゲーム（現在メンテ中）。</p>
+            </div>
+            <button class="action-btn" id="startLookAwayTrainingBtn">開始</button>
           </div>
         </div>
         <div class="training-box" id="trainingBox" hidden>
@@ -1641,19 +1750,21 @@
             </div>
             <button class="danger-btn" id="resetBtn">リセット</button>
           </div>
-          <div class="setting-row">
-            <div>
-              <strong>氷スライド</strong>
-              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">簡易テストモードを起動する</div>
+          <div class="setting-row" style="display:block;">
+            <div style="margin-bottom:8px;">
+              <strong>プロフィール</strong>
+              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">詳細ステータス</div>
             </div>
-            <button class="action-btn" id="startIceSlideBtn">開始</button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <strong>カーリング</strong>
-              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">1ショットで中心をねらう独立ミニゲーム</div>
+            <div style="display:grid; gap:6px; font-size:13px; color:#46607c;">
+              <div>まんぷく: <strong id="detailHungerValue">0</strong></div>
+              <div>ごきげん: <strong id="detailHappyValue">0</strong></div>
+              <div>元気: <strong id="detailStaminaValue">0</strong></div>
+              <div>なかよし: <strong id="detailBondValue">0</strong></div>
+              <div>体重: <strong id="detailWeightValue">0.0</strong></div>
+              <div>成長: <strong id="detailGrowthValue">0</strong></div>
+              <div>性格: <strong id="detailPersonalityValue">-</strong></div>
+              <div>トレーニング能力: <strong id="detailTrainingAbility">まだまだ</strong></div>
             </div>
-            <button class="action-btn" id="startCurlingBtn">開始</button>
           </div>
         </div>
       </div>
@@ -1679,7 +1790,7 @@
       <div class="curling-info">
         <div class="curling-card">
           <strong>あそびかた</strong>
-          <div id="curlingStatusText">ドラッグで方向を決めて、ボタン長押しでパワーをためよう。</div>
+          <div id="curlingStatusText">3〜5投のショットで合計点を狙おう。石の重さで挙動が変わるよ。</div>
         </div>
         <div class="curling-card">
           <strong>スコア</strong>
@@ -1705,6 +1816,30 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="curling-launch-btn" id="curlingLaunchBtn">長押しでショット</button>
           <button class="curling-retry-btn" id="curlingRetryBtn">リトライ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="look-away-overlay" id="lookAwayOverlay">
+      <div class="look-away-card">
+        <div class="look-away-header">
+          <h3 class="look-away-title">ホイ</h3>
+          <button class="close-btn" id="closeLookAwayBtn" type="button">×</button>
+        </div>
+        <p class="look-away-subtext">このミニゲームは現在メンテナンス中です。</p>
+        <div class="look-away-footer">
+          <button class="action-btn" id="lookAwayBackBtn" type="button">メインへ戻る</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="training-result-overlay" id="trainingResultOverlay">
+      <div class="training-result-card">
+        <h3 id="trainingResultTitle">トレーニング結果</h3>
+        <p id="trainingResultSummary">結果を表示します。</p>
+        <p id="trainingRewardSummary">能力反映はありません。</p>
+        <div class="minigame-actions">
+          <button class="action-btn" id="trainingResultBackBtn" type="button">メインへ戻る</button>
         </div>
       </div>
     </div>
@@ -1901,6 +2036,22 @@
     const statusBubble = document.getElementById('statusBubble');
     const moodBadge = document.getElementById('moodBadge');
     const timeBadge = document.getElementById('timeBadge');
+    const mainHungerState = document.getElementById('mainHungerState');
+    const mainHappyState = document.getElementById('mainHappyState');
+    const mainStaminaState = document.getElementById('mainStaminaState');
+    const healthComment = document.getElementById('healthComment');
+    const minigameOverlay = document.getElementById('minigameOverlay');
+    const minigameArea = document.getElementById('minigameArea');
+    const minigameFish = document.getElementById('minigameFish');
+    const minigameScore = document.getElementById('minigameScore');
+    const minigameTime = document.getElementById('minigameTime');
+    const minigameResult = document.getElementById('minigameResult');
+    const minigameResultText = document.getElementById('minigameResultText');
+    const minigameStartScreen = document.getElementById('minigameStartScreen');
+    const minigameStartBtn = document.getElementById('minigameStartBtn');
+    const minigameRetryBtn = document.getElementById('minigameRetryBtn');
+    const minigameBackBtn = document.getElementById('minigameBackBtn');
+    const minigameResultBackBtn = document.getElementById('minigameResultBackBtn');
     const logList = document.getElementById('logList');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
@@ -1919,20 +2070,38 @@
     const foodList = document.getElementById('foodList');
     const toyList = document.getElementById('toyList');
     const startTrainingBtn = document.getElementById('startTrainingBtn');
+    const startFishCatchTrainingBtn = document.getElementById('startFishCatchTrainingBtn');
     const trainingBox = document.getElementById('trainingBox');
     const trainingTarget = document.getElementById('trainingTarget');
     const trainingProgress = document.getElementById('trainingProgress');
     const timeToggle = document.getElementById('timeToggle');
     const volumeSlider = document.getElementById('volumeSlider');
     const resetBtn = document.getElementById('resetBtn');
-    const startIceSlideBtn = document.getElementById('startIceSlideBtn');
+    const detailHungerValue = document.getElementById('detailHungerValue');
+    const detailHappyValue = document.getElementById('detailHappyValue');
+    const detailStaminaValue = document.getElementById('detailStaminaValue');
+    const detailBondValue = document.getElementById('detailBondValue');
+    const detailWeightValue = document.getElementById('detailWeightValue');
+    const detailGrowthValue = document.getElementById('detailGrowthValue');
+    const detailPersonalityValue = document.getElementById('detailPersonalityValue');
+    const detailTrainingAbility = document.getElementById('detailTrainingAbility');
+    const startIceSlideTrainingBtn = document.getElementById('startIceSlideTrainingBtn');
     const iceSlideOverlay = document.getElementById('iceSlideOverlay');
     const iceSlideArena = document.getElementById('iceSlideArena');
     const iceSlideSeal = document.getElementById('iceSlideSeal');
     const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
-    const startCurlingBtn = document.getElementById('startCurlingBtn');
+    const startCurlingTrainingBtn = document.getElementById('startCurlingTrainingBtn');
     const curlingOverlay = document.getElementById('curlingOverlay');
     const closeCurlingBtn = document.getElementById('closeCurlingBtn');
+    const startLookAwayTrainingBtn = document.getElementById('startLookAwayTrainingBtn');
+    const lookAwayOverlay = document.getElementById('lookAwayOverlay');
+    const closeLookAwayBtn = document.getElementById('closeLookAwayBtn');
+    const lookAwayBackBtn = document.getElementById('lookAwayBackBtn');
+    const trainingResultOverlay = document.getElementById('trainingResultOverlay');
+    const trainingResultTitle = document.getElementById('trainingResultTitle');
+    const trainingResultSummary = document.getElementById('trainingResultSummary');
+    const trainingRewardSummary = document.getElementById('trainingRewardSummary');
+    const trainingResultBackBtn = document.getElementById('trainingResultBackBtn');
     const curlingSheet = document.getElementById('curlingSheet');
     const curlingHouse = document.getElementById('curlingHouse');
     const curlingStone = document.getElementById('curlingStone');
@@ -1993,38 +2162,70 @@
       needed: 5
     };
 
-    let gameMode = 'main';
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
     let curlingState = createCurlingState();
     let pendingAction = null;
     let placedAction = null;
-    const minigame = window.createMinigameModule({
-      area: minigameArea,
-      overlay: minigameOverlay,
-      fish: minigameFish,
-      scoreLabel: minigameScore,
-      timeLabel: minigameTime,
-      resultLayer: minigameResult,
-      resultText: minigameResultText,
-      startScreen: minigameStartScreen
-    });
+    const minigame = (window.createMinigameModule && minigameArea && minigameOverlay)
+      ? window.createMinigameModule({
+          area: minigameArea,
+          overlay: minigameOverlay,
+          fish: minigameFish,
+          scoreLabel: minigameScore,
+          timeLabel: minigameTime,
+          resultLayer: minigameResult,
+          resultText: minigameResultText,
+          startScreen: minigameStartScreen
+        })
+      : null;
+    let minigameState = minigame ? minigame.createState() : null;
+    const petInteraction = {
+      active: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      distance: 0,
+      tapCount: 0,
+      lastTapTime: 0
+    };
+    const AUTO_BEHAVIOR_CHECK_MIN = 5;
+    const AUTO_BEHAVIOR_CHECK_MAX = 10;
+    const AUTO_BEHAVIOR_TRIGGER_RATE = 0.32;
+    let autoBehaviorTimer = randomAutoBehaviorInterval();
+    let sparringState = createSparringState();
+    let sparringInput = 0;
+    let sparringPointerX = null;
+    let lookAwayMode = false;
+    let trainingResultState = null;
+
+    // ------------------------------
+    // training menu / minigame runner
+    // ------------------------------
+    const minigameRunner = {
+      activeMinigame: null,
+      startedAt: 0
+    };
 
     init();
 
     function init() {
-      minigameState = minigame.createState();
+      if (minigame) minigameState = minigame.createState();
+      gameMode = 'main';
+      minigameRunner.activeMinigame = null;
+      iceSlideOverlay.classList.remove('open');
+      curlingOverlay.classList.remove('open');
+      lookAwayOverlay.classList.remove('open');
+      trainingResultOverlay.classList.remove('open');
       placeSealInitially();
       renderFoodList();
       renderToyList();
       bindEvents();
       applyOfflineProgress();
       updateStage();
-      initializeSparringLayout();
       render();
       window.startIceSlideMode = startIceSlideMode;
-      window.startSparringMode = startSparringMode;
       requestAnimationFrame(loop);
       setInterval(saveState, 5000);
     }
@@ -2109,10 +2310,6 @@
     function bindEvents() {
       document.querySelectorAll('.nav-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-          if (btn.dataset.mode === 'lookAway') {
-            startLookAwayGame();
-            return;
-          }
           openPanel(btn.dataset.panel);
         });
       });
@@ -2135,15 +2332,20 @@
       window.addEventListener('pointerup', onPetPointerUp);
       window.addEventListener('pointercancel', resetPetInteraction);
       startTrainingBtn.addEventListener('click', startTraining);
+      startFishCatchTrainingBtn.addEventListener('click', openMinigame);
       trainingTarget.addEventListener('click', onTrainingTap);
-      startIceSlideBtn.addEventListener('click', startIceSlideMode);
-      collectedDropBtn.addEventListener('click', dropCollectedItem);
-      closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
-      startCurlingBtn.addEventListener('click', startCurling);
-      closeCurlingBtn.addEventListener('click', stopCurling);
+      startIceSlideTrainingBtn.addEventListener('click', () => startMinigame('iceSlide'));
+      closeIceSlideBtn.addEventListener('click', cancelMinigame);
+      startCurlingTrainingBtn.addEventListener('click', () => startMinigame('curling'));
+      closeCurlingBtn.addEventListener('click', cancelMinigame);
+      startLookAwayTrainingBtn.addEventListener('click', () => startMinigame('lookAway'));
+      closeLookAwayBtn.addEventListener('click', cancelMinigame);
+      lookAwayBackBtn.addEventListener('click', cancelMinigame);
+      trainingResultBackBtn.addEventListener('click', onTrainingResultBack);
       curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
       bindCurlingControls();
+      bindMinigameControls();
 
       timeToggle.checked = state.showTime;
       volumeSlider.value = state.volume;
@@ -2165,14 +2367,14 @@
         state = defaultState();
         training = { active: false, taps: 0, needed: 5 };
         gameMode = 'main';
-        minigameState = minigame.createState();
+        if (minigame) minigameState = minigame.createState();
         stopIceSlideMode();
         stopCurling();
+        stopLookAwayMode();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
         placeSealInitially();
-        initializeSparringLayout();
         renderFoodList();
         renderToyList();
         render();
@@ -2189,6 +2391,264 @@
       });
     }
 
+
+    function bindMinigameControls() {
+      if (!minigame) return;
+      if (minigameStartBtn) minigameStartBtn.addEventListener('click', () => minigame.start(minigameState));
+      if (minigameRetryBtn) minigameRetryBtn.addEventListener('click', () => minigame.start(minigameState));
+      if (minigameFish) minigameFish.addEventListener('click', () => minigame.catchFish(minigameState));
+      if (minigameBackBtn) minigameBackBtn.addEventListener('click', closeMinigame);
+      if (minigameResultBackBtn) minigameResultBackBtn.addEventListener('click', closeMinigame);
+    }
+
+    function openMinigame() {
+      if (!minigame || !minigameState) return;
+      closePanels();
+      stopIceSlideMode();
+      stopCurling();
+      stopLookAwayMode();
+      gameMode = 'minigame';
+      minigame.prepare(minigameState);
+      renderMinigame();
+    }
+
+    function closeMinigame() {
+      if (!minigame || !minigameState) return;
+      gameMode = 'main';
+      minigame.stop(minigameState);
+      renderMain();
+    }
+
+    function renderMinigame() {
+      if (!minigame || !minigameState) return;
+      minigame.render(minigameState, true);
+    }
+
+    function renderMain() {
+      if (minigame && minigameState) minigame.render(minigameState, false);
+    }
+
+    const trainingMinigameModules = {
+      iceSlide: {
+        start() {
+          startIceSlideMode();
+        },
+        update(dt) {
+          updateIceSlide(dt);
+        },
+        render() {
+          renderIceSlide();
+        },
+        cancelResult(durationSec) {
+          return buildTrainingResult('iceSlide', false, 0, 'cancel', { durationSec });
+        }
+      },
+      curling: {
+        start() {
+          startCurling();
+        },
+        update(dt) {
+          updateCurling(dt);
+          if (curlingState.gameFinished && !curlingState.resultCommitted) {
+            curlingState.resultCommitted = true;
+            const performance = curlingState.score >= 120 ? 'great' : curlingState.score >= 60 ? 'good' : 'ok';
+            finishMinigame(buildTrainingResult('curling', curlingState.score >= 60, curlingState.score, performance, {
+              durationSec: roundDuration((Date.now() - minigameRunner.startedAt) / 1000),
+              shots: curlingState.shotsTotal,
+              ringsHit: curlingState.placedStones.filter((stone) => calcScoreForPosition(stone.x, stone.y) > 0).length
+            }));
+          }
+        },
+        render() {
+          renderCurling();
+        },
+        cancelResult(durationSec) {
+          return buildTrainingResult('curling', false, curlingState.score || 0, 'cancel', { durationSec });
+        }
+      },
+      lookAway: {
+        start() {
+          startLookAwayMode();
+        },
+        update() {},
+        render() {},
+        cancelResult(durationSec) {
+          return buildTrainingResult('lookAway', false, 0, 'cancel', { durationSec });
+        }
+      }
+    };
+
+    function startMinigame(gameId) {
+      const module = trainingMinigameModules[gameId];
+      if (!module || minigameRunner.activeMinigame) return;
+      closePanels();
+      hideTrainingResult();
+      minigameRunner.activeMinigame = gameId;
+      minigameRunner.startedAt = Date.now();
+      module.start();
+    }
+
+    function updateActiveMinigame(dt) {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return false;
+      const module = trainingMinigameModules[gameId];
+      if (!module) return false;
+      module.update(dt);
+      return true;
+    }
+
+    function renderActiveMinigame() {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return;
+      const module = trainingMinigameModules[gameId];
+      if (!module) return;
+      module.render();
+    }
+
+    function finishMinigame(result) {
+      if (!result || !result.gameId) return;
+      const reward = resolveTrainingReward(result.gameId, result);
+      applyTrainingReward(reward);
+      trainingResultState = { result, reward };
+      if (result.gameId === 'iceSlide') stopIceSlideMode();
+      if (result.gameId === 'curling') stopCurling();
+      if (result.gameId === 'lookAway') stopLookAwayMode();
+      minigameRunner.activeMinigame = null;
+      showTrainingResult(trainingResultState);
+      render();
+      saveState();
+    }
+
+    function cancelMinigame() {
+      const gameId = minigameRunner.activeMinigame;
+      if (!gameId) return;
+      const module = trainingMinigameModules[gameId];
+      const durationSec = roundDuration((Date.now() - minigameRunner.startedAt) / 1000);
+      const cancelResult = module ? module.cancelResult(durationSec) : null;
+      if (cancelResult) {
+        finishMinigame(cancelResult);
+      }
+    }
+
+    // ------------------------------
+    // reward resolver / reward applier
+    // ------------------------------
+    function buildTrainingResult(gameId, cleared, score, performance, stats = {}) {
+      return {
+        gameId,
+        cleared,
+        score,
+        performance,
+        stats
+      };
+    }
+
+    function resolveTrainingReward(gameId, result) {
+      if (gameId === 'iceSlide') {
+        const perf = result.performance === 'great' ? 1.2 : result.performance === 'good' ? 1 : 0.7;
+        return {
+          stamina: -Math.round(8 * perf),
+          happiness: Math.round(9 * perf),
+          bond: Math.round(3 * perf),
+          growth: Math.round(2 * perf),
+          weight: -0.4 * perf,
+          logs: ['氷スライドで元気にあそんだ']
+        };
+      }
+      if (gameId === 'curling') {
+        const perf = result.score >= 80 ? 1.2 : result.score >= 50 ? 1 : 0.75;
+        return {
+          stamina: -Math.round(5 * perf),
+          happiness: Math.round(8 * perf),
+          bond: Math.round(2 * perf),
+          growth: Math.round(3 * perf),
+          weight: -0.2 * perf,
+          logs: ['カーリングで集中してあそんだ']
+        };
+      }
+      if (gameId === 'lookAway') {
+        return {
+          stamina: -2,
+          happiness: 4,
+          bond: 1,
+          growth: 1,
+          weight: -0.1,
+          logs: ['ホイはメンテナンス中だった']
+        };
+      }
+      return {
+        stamina: 0,
+        happiness: 0,
+        bond: 0,
+        growth: 0,
+        weight: 0,
+        logs: []
+      };
+    }
+
+    function applyTrainingReward(reward) {
+      if (!reward) return;
+      applyDelta(state, {
+        stamina: reward.stamina || 0,
+        happiness: reward.happiness || 0,
+        bond: reward.bond || 0,
+        growth: reward.growth || 0,
+        weight: reward.weight || 0
+      });
+      clampState();
+      updateStage();
+      (reward.logs || []).forEach((log) => {
+        state.lastStatus = log;
+        addLog(log);
+      });
+    }
+
+    // ------------------------------
+    // result screen
+    // ------------------------------
+    function showTrainingResult(payload) {
+      if (!payload) return;
+      trainingResultTitle.textContent = `結果: ${getGameLabel(payload.result.gameId)}`;
+      trainingResultSummary.textContent = `スコア ${payload.result.score} / 判定 ${payload.result.performance} / ${payload.result.cleared ? 'クリア' : '中断'}`;
+      trainingRewardSummary.textContent = `反映: 体力 ${formatSigned(payload.reward.stamina)} / ごきげん ${formatSigned(payload.reward.happiness)} / なかよし ${formatSigned(payload.reward.bond)} / 成長 ${formatSigned(payload.reward.growth)} / 体重 ${formatSigned(payload.reward.weight, 1)}`;
+      trainingResultOverlay.classList.add('open');
+    }
+
+    function hideTrainingResult() {
+      trainingResultOverlay.classList.remove('open');
+      trainingResultState = null;
+    }
+
+    function onTrainingResultBack() {
+      hideTrainingResult();
+      gameMode = 'main';
+      render();
+    }
+
+    function getGameLabel(gameId) {
+      return ({
+        iceSlide: '氷スライド',
+        curling: 'カーリング',
+        lookAway: 'ホイ'
+      })[gameId] || gameId;
+    }
+
+    function formatSigned(value, digits = 0) {
+      const fixed = Number(value || 0).toFixed(digits);
+      return Number(fixed) > 0 ? `+${fixed}` : fixed;
+    }
+
+    function roundDuration(sec) {
+      return Math.max(0, Math.round(sec * 10) / 10);
+    }
+
+    function scoreToPerformance(score) {
+      if (score >= 80) return 'great';
+      if (score >= 50) return 'good';
+      if (score > 0) return 'ok';
+      return 'cancel';
+    }
+
     function createIceSlideState() {
       return {
         x: 0,
@@ -2200,14 +2660,25 @@
       };
     }
 
+    const CURLING_STONE_TYPES = {
+      light: { label: 'light', speedMul: 1.12, friction: 0.972, bounce: 0.74, push: 0.78, control: 1.12 },
+      normal: { label: 'normal', speedMul: 1, friction: 0.985, bounce: 0.82, push: 1, control: 1 },
+      heavy: { label: 'heavy', speedMul: 0.9, friction: 0.992, bounce: 0.9, push: 1.34, control: 0.84 }
+    };
+
     function createCurlingState() {
       return {
         active: false,
-        stone: { x: 0, y: 0, vx: 0, vy: 0 },
+        stone: { x: 0, y: 0, vx: 0, vy: 0, type: 'normal' },
+        placedStones: [],
+        targetRings: [],
         aiming: true,
         power: 0,
         score: 0,
         shotTaken: false,
+        shotsTotal: 0,
+        shotsLeft: 0,
+        shotScore: 0,
         dragging: false,
         charging: false,
         chargeDirection: 1,
@@ -2217,7 +2688,11 @@
         statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
         house: { x: 0, y: 0, rings: 120 },
         arena: { width: 0, height: 0, stoneRadius: 24 },
-        hasScore: false
+        hasScore: false,
+        resultCommitted: false,
+        gameFinished: false,
+        targetElements: [],
+        settledStoneElements: []
       };
     }
 
@@ -2324,6 +2799,7 @@
     function startIceSlideMode() {
       closePanels();
       stopCurling();
+      stopLookAwayMode();
       gameMode = 'iceSlide';
       iceSlideMode = true;
       iceSlideInput = 0;
@@ -2358,19 +2834,39 @@
     function startCurling() {
       closePanels();
       stopIceSlideMode();
+      stopLookAwayMode();
       gameMode = 'curling';
       curlingState = createCurlingState();
       curlingState.active = true;
       initializeCurlingLayout();
+      prepareNextCurlingStone();
       curlingOverlay.classList.add('open');
       renderCurling();
     }
 
     function stopCurling() {
       if (gameMode === 'curling') gameMode = 'main';
+      curlingSheet.querySelectorAll('.extra-target, .curling-stone.settled').forEach((node) => node.remove());
       curlingState = createCurlingState();
       curlingOverlay.classList.remove('open');
       renderCurling();
+    }
+
+    function startLookAwayMode() {
+      closePanels();
+      stopIceSlideMode();
+      stopCurling();
+      gameMode = 'lookAway';
+      lookAwayMode = true;
+      lookAwayOverlay.classList.add('open');
+      render();
+    }
+
+    function stopLookAwayMode() {
+      if (gameMode === 'lookAway') gameMode = 'main';
+      lookAwayMode = false;
+      lookAwayOverlay.classList.remove('open');
+      render();
     }
 
     function initializeCurlingLayout() {
@@ -2378,7 +2874,7 @@
       curlingState.arena.width = rect.width;
       curlingState.arena.height = rect.height;
       curlingState.house.x = rect.width * 0.5;
-      curlingState.house.y = rect.height * 0.3;
+      curlingState.house.y = rect.height * 0.32;
       curlingState.house.rings = 120;
       curlingState.stone.x = rect.width * 0.5;
       curlingState.stone.y = rect.height * 0.83;
@@ -2386,6 +2882,67 @@
       curlingState.stone.vy = 0;
       curlingState.direction = { x: 0, y: -1 };
       curlingState.directionAngle = -Math.PI / 2;
+      curlingState.shotsTotal = randomFrom([3, 4, 5]);
+      curlingState.shotsLeft = curlingState.shotsTotal;
+      curlingState.score = 0;
+      curlingState.placedStones = [];
+      curlingState.targetRings = buildCurlingTargets(rect);
+      cleanupCurlingAuxElements();
+      buildCurlingTargetElements();
+      curlingState.statusText = `${curlingState.shotsTotal}投チャレンジ。まずは1投目！`;
+    }
+
+    function buildCurlingTargets(rect) {
+      return [
+        { id: 'left-large', x: rect.width * 0.28, y: rect.height * 0.36, radius: 104, score: 10, label: 'L 10' },
+        { id: 'center-medium', x: rect.width * 0.52, y: rect.height * 0.28, radius: 84, score: 30, label: 'M 30' },
+        { id: 'right-small', x: rect.width * 0.74, y: rect.height * 0.22, radius: 60, score: 80, label: 'S 80' }
+      ];
+    }
+
+    function cleanupCurlingAuxElements() {
+      curlingState.targetElements.forEach((el) => el.remove());
+      curlingState.targetElements = [];
+      curlingState.settledStoneElements.forEach((el) => el.remove());
+      curlingState.settledStoneElements = [];
+    }
+
+    function buildCurlingTargetElements() {
+      const targets = curlingState.targetRings;
+      if (!targets.length) return;
+      targets.forEach((target, idx) => {
+        const el = idx === 0 ? curlingHouse : document.createElement('div');
+        if (idx !== 0) {
+          el.className = 'curling-house extra-target';
+          curlingSheet.appendChild(el);
+          curlingState.targetElements.push(el);
+        }
+        const size = target.radius * 2;
+        el.style.width = `${size}px`;
+        el.style.height = `${size}px`;
+        el.style.left = `${target.x}px`;
+        el.style.top = `${target.y}px`;
+        el.style.opacity = idx === 0 ? '0.95' : idx === 1 ? '0.9' : '0.88';
+        el.style.borderColor = idx === 0 ? 'rgba(59,130,246,0.45)' : idx === 1 ? 'rgba(14,165,233,0.48)' : 'rgba(244,63,94,0.5)';
+      });
+    }
+
+    function prepareNextCurlingStone() {
+      curlingState.shotTaken = false;
+      curlingState.aiming = true;
+      curlingState.dragging = false;
+      curlingState.charging = false;
+      curlingState.power = 0;
+      curlingState.chargeDirection = 1;
+      curlingState.shotScore = 0;
+      curlingState.stone.x = curlingState.arena.width * 0.5;
+      curlingState.stone.y = curlingState.arena.height * 0.83;
+      curlingState.stone.vx = 0;
+      curlingState.stone.vy = 0;
+      curlingState.direction = { x: 0, y: -1 };
+      curlingState.directionAngle = -Math.PI / 2;
+      curlingState.stone.type = randomFrom(Object.keys(CURLING_STONE_TYPES));
+      curlingState.resultText = `${curlingState.shotsTotal - curlingState.shotsLeft + 1}/${curlingState.shotsTotal}投目 (${curlingState.stone.type})`;
     }
 
     function onCurlingPointerDown(event) {
@@ -2431,8 +2988,9 @@
       const dy = point.y - curlingState.stone.y;
       const distance = Math.hypot(dx, dy);
       if (distance < 12) return;
+      const control = CURLING_STONE_TYPES[curlingState.stone.type]?.control || 1;
       curlingState.direction = { x: dx / distance, y: dy / distance };
-      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x);
+      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x) * control;
       curlingState.statusText = '方向OK。長押しでパワーをためてショットしよう。';
     }
 
@@ -2448,24 +3006,28 @@
 
     function shootStone() {
       if (!curlingState.active || curlingState.shotTaken) return;
-      const speed = 120 + (curlingState.power * 360);
-      curlingState.stone.vx = curlingState.direction.x * speed;
-      curlingState.stone.vy = curlingState.direction.y * speed;
+      const stoneConfig = CURLING_STONE_TYPES[curlingState.stone.type] || CURLING_STONE_TYPES.normal;
+      const speed = (120 + (curlingState.power * 360)) * stoneConfig.speedMul;
+      const angle = curlingState.directionAngle;
+      curlingState.stone.vx = Math.cos(angle) * speed;
+      curlingState.stone.vy = Math.sin(angle) * speed;
       curlingState.aiming = false;
       curlingState.shotTaken = true;
-      curlingState.statusText = 'ストーンがすべっている…';
+      curlingState.statusText = `${curlingState.stone.type} stone がすべっている…`;
       curlingState.resultText = 'ストーンが止まるまで見守ろう。';
       curlingState.hasScore = false;
       renderCurling();
     }
 
-    function calcScore() {
-      const dx = curlingState.stone.x - curlingState.house.x;
-      const dy = curlingState.stone.y - curlingState.house.y;
-      const distance = Math.hypot(dx, dy);
-      const maxDistance = curlingState.house.rings;
-      const normalized = clamp(1 - (distance / maxDistance), 0, 1);
-      return Math.round(normalized * 100);
+    function calcScoreForPosition(x, y) {
+      let best = 0;
+      curlingState.targetRings.forEach((target) => {
+        const distance = Math.hypot(x - target.x, y - target.y);
+        if (distance <= target.radius) {
+          best = Math.max(best, target.score);
+        }
+      });
+      return best;
     }
 
     function updateCurling(dt) {
@@ -2489,29 +3051,81 @@
         return;
       }
 
-      const friction = Math.pow(0.985, dt * 60);
+      const stoneConfig = CURLING_STONE_TYPES[curlingState.stone.type] || CURLING_STONE_TYPES.normal;
+      const friction = Math.pow(stoneConfig.friction, dt * 60);
       curlingState.stone.vx *= friction;
       curlingState.stone.vy *= friction;
       curlingState.stone.x += curlingState.stone.vx * dt;
       curlingState.stone.y += curlingState.stone.vy * dt;
-      reflectCurlingStone();
+      reflectCurlingStone(stoneConfig.bounce);
+      resolveCurlingStoneCollision(stoneConfig.push, dt);
 
       const speed = Math.hypot(curlingState.stone.vx, curlingState.stone.vy);
       if (speed < 8) {
         curlingState.stone.vx = 0;
         curlingState.stone.vy = 0;
-        if (!curlingState.hasScore) {
-          curlingState.score = calcScore();
-          curlingState.hasScore = true;
-          curlingState.statusText = 'ショット終了！ リトライでもう一回遊べるよ。';
-          curlingState.resultText = buildCurlingResultText(curlingState.score);
+        if (curlingState.shotTaken) {
+          finalizeCurlingShot();
         }
       }
 
       renderCurling();
     }
 
-    function reflectCurlingStone() {
+    function resolveCurlingStoneCollision(pushFactor, dt) {
+      const radius = curlingState.arena.stoneRadius;
+      curlingState.placedStones.forEach((stone) => {
+        const dx = curlingState.stone.x - stone.x;
+        const dy = curlingState.stone.y - stone.y;
+        const distance = Math.hypot(dx, dy);
+        const minDistance = radius * 2;
+        if (distance <= 0.0001 || distance >= minDistance) return;
+        const nx = dx / distance;
+        const ny = dy / distance;
+        const overlap = minDistance - distance;
+        curlingState.stone.x += nx * overlap * 0.5;
+        curlingState.stone.y += ny * overlap * 0.5;
+        stone.x -= nx * overlap * 0.5;
+        stone.y -= ny * overlap * 0.5;
+        const impulse = Math.hypot(curlingState.stone.vx, curlingState.stone.vy) * 0.34 * pushFactor;
+        stone.vx = -nx * impulse;
+        stone.vy = -ny * impulse;
+        curlingState.stone.vx *= 0.7;
+        curlingState.stone.vy *= 0.7;
+      });
+
+      curlingState.placedStones.forEach((stone) => {
+        stone.vx *= Math.pow(0.98, dt * 60);
+        stone.vy *= Math.pow(0.98, dt * 60);
+        stone.x += stone.vx * dt;
+        stone.y += stone.vy * dt;
+        reflectSettledStone(stone);
+      });
+    }
+
+    function reflectSettledStone(stone) {
+      const radius = curlingState.arena.stoneRadius;
+      const maxX = curlingState.arena.width - radius - 18;
+      const minX = radius + 18;
+      const maxY = curlingState.arena.height - radius - 18;
+      const minY = radius + 18;
+      if (stone.x <= minX) {
+        stone.x = minX;
+        stone.vx = Math.abs(stone.vx) * 0.7;
+      } else if (stone.x >= maxX) {
+        stone.x = maxX;
+        stone.vx = -Math.abs(stone.vx) * 0.7;
+      }
+      if (stone.y <= minY) {
+        stone.y = minY;
+        stone.vy = Math.abs(stone.vy) * 0.7;
+      } else if (stone.y >= maxY) {
+        stone.y = maxY;
+        stone.vy = -Math.abs(stone.vy) * 0.7;
+      }
+    }
+
+    function reflectCurlingStone(bounceFactor) {
       const radius = curlingState.arena.stoneRadius;
       const maxX = curlingState.arena.width - radius - 18;
       const minX = radius + 18;
@@ -2520,41 +3134,81 @@
 
       if (curlingState.stone.x <= minX) {
         curlingState.stone.x = minX;
-        curlingState.stone.vx = Math.abs(curlingState.stone.vx) * 0.82;
+        curlingState.stone.vx = Math.abs(curlingState.stone.vx) * bounceFactor;
       } else if (curlingState.stone.x >= maxX) {
         curlingState.stone.x = maxX;
-        curlingState.stone.vx = -Math.abs(curlingState.stone.vx) * 0.82;
+        curlingState.stone.vx = -Math.abs(curlingState.stone.vx) * bounceFactor;
       }
 
       if (curlingState.stone.y <= minY) {
         curlingState.stone.y = minY;
-        curlingState.stone.vy = Math.abs(curlingState.stone.vy) * 0.82;
+        curlingState.stone.vy = Math.abs(curlingState.stone.vy) * bounceFactor;
       } else if (curlingState.stone.y >= maxY) {
         curlingState.stone.y = maxY;
-        curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * 0.82;
+        curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * bounceFactor;
       }
     }
 
+    function finalizeCurlingShot() {
+      const shotScore = calcScoreForPosition(curlingState.stone.x, curlingState.stone.y);
+      curlingState.shotScore = shotScore;
+      curlingState.score += shotScore;
+      curlingState.shotsLeft = Math.max(0, curlingState.shotsLeft - 1);
+      addSettledCurlingStone();
+
+      if (curlingState.shotsLeft > 0) {
+        curlingState.statusText = `この投は ${shotScore}点。次の石を配布！`;
+        curlingState.resultText = `合計 ${curlingState.score}点 / のこり ${curlingState.shotsLeft}投`;
+        prepareNextCurlingStone();
+        return;
+      }
+
+      curlingState.hasScore = true;
+      curlingState.gameFinished = true;
+      curlingState.statusText = `最終スコア ${curlingState.score}点。`;
+      curlingState.resultText = buildCurlingResultText(curlingState.score);
+    }
+
+    function addSettledCurlingStone() {
+      const settled = {
+        x: curlingState.stone.x,
+        y: curlingState.stone.y,
+        vx: curlingState.stone.vx,
+        vy: curlingState.stone.vy,
+        type: curlingState.stone.type
+      };
+      curlingState.placedStones.push(settled);
+      const el = document.createElement('div');
+      el.className = `curling-stone settled stone-${settled.type}`;
+      curlingSheet.appendChild(el);
+      curlingState.settledStoneElements.push(el);
+    }
+
     function buildCurlingResultText(score) {
-      if (score >= 90) return `すごい！ 中心近くまで寄せて ${score} 点！`;
-      if (score >= 65) return `いい感じ！ ハウスの中に収まって ${score} 点。`;
-      if (score >= 35) return `まずまず！ 次はもう少し中心をねらって ${score} 点。`;
-      return `外側ぎりぎりで ${score} 点。方向とパワーを調整して再挑戦！`;
+      if (score >= 120) return `高評価！ 合計 ${score} 点で大成功！`;
+      if (score >= 60) return `成功！ 合計 ${score} 点を達成。`;
+      return `今回は ${score} 点。次は反射や押し出しを活用しよう。`;
     }
 
     function renderCurling() {
       const visible = curlingState.active;
       curlingOverlay.classList.toggle('open', visible);
-      curlingHouse.style.left = `${curlingState.house.x}px`;
-      curlingHouse.style.top = `${curlingState.house.y}px`;
       curlingStone.style.left = `${curlingState.stone.x}px`;
       curlingStone.style.top = `${curlingState.stone.y}px`;
+      curlingStone.className = `curling-stone stone-${curlingState.stone.type}`;
       curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
       curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
       curlingScoreValue.textContent = String(curlingState.score);
-      curlingStatusText.textContent = curlingState.statusText;
+      curlingStatusText.textContent = `${curlingState.statusText}（残り ${curlingState.shotsLeft}投）`;
       curlingResultText.textContent = curlingState.resultText;
       curlingResultCard.classList.toggle('visible', curlingState.shotTaken || curlingState.hasScore);
+
+      curlingState.placedStones.forEach((stone, index) => {
+        const el = curlingState.settledStoneElements[index];
+        if (!el) return;
+        el.style.left = `${stone.x}px`;
+        el.style.top = `${stone.y}px`;
+      });
 
       const aimLength = 110;
       curlingAimLine.style.left = `${curlingState.stone.x}px`;
@@ -2566,7 +3220,7 @@
       curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.direction.y * aimLength}px`;
       curlingAimAnchor.classList.toggle('visible', curlingState.aiming && !curlingState.shotTaken);
 
-      curlingLaunchBtn.disabled = curlingState.shotTaken;
+      curlingLaunchBtn.disabled = curlingState.shotTaken || curlingState.gameFinished;
       curlingRetryBtn.disabled = !curlingState.active;
     }
 
@@ -3159,21 +3813,26 @@
     function loop(now) {
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
-      if (iceSlideMode) {
-        updateIceSlide(dt);
+      if (updateActiveMinigame(dt)) {
+        renderActiveMinigame();
+        render();
         requestAnimationFrame(loop);
         return;
       }
-      if (gameMode === 'curling' && curlingState.active) {
-        updateCurling(dt);
+      if (gameMode === 'minigame') {
+        updateMinigame(dt);
+        render();
         requestAnimationFrame(loop);
         return;
       }
       tickState(dt);
       tickSeal(dt);
+      render();
+      requestAnimationFrame(loop);
     }
 
     function updateMinigame(dt) {
+      if (!minigame || !minigameState) return;
       minigame.update(minigameState, dt);
     }
 
@@ -3420,6 +4079,7 @@
       // 時間経過で減衰・自然回復する値をまとめて更新する。
       applyDelta(state, buildPassiveStateDelta(dt));
       applyPassiveStateBonuses(dt);
+      collectPassiveItems(dt);
       handleAutoBehavior(dt);
       clampState();
       updateTimeTheme();
@@ -3648,16 +4308,28 @@
       fishValue.textContent = Math.floor(state.fish);
       stageValue.textContent = getStageLabel();
       statusBubble.textContent = getCurrentStatusText();
-      hungerBar.style.width = `${state.hunger}%`;
-      happyBar.style.width = `${state.happiness}%`;
-      staminaBar.style.width = `${state.stamina}%`;
-      bondBar.style.width = `${state.bond}%`;
-      weightBar.style.width = `${mapWeightToPercent(state.weight)}%`;
-      hungerValue.textContent = Math.floor(state.hunger);
-      happyValue.textContent = Math.floor(state.happiness);
-      staminaValue.textContent = Math.floor(state.stamina);
-      bondValue.textContent = Math.floor(state.bond);
-      weightValue.textContent = state.weight.toFixed(1);
+      if (hungerBar) hungerBar.style.width = `${state.hunger}%`;
+      if (happyBar) happyBar.style.width = `${state.happiness}%`;
+      if (staminaBar) staminaBar.style.width = `${state.stamina}%`;
+      if (bondBar) bondBar.style.width = `${state.bond}%`;
+      if (weightBar) weightBar.style.width = `${mapWeightToPercent(state.weight)}%`;
+      if (hungerValue) hungerValue.textContent = Math.floor(state.hunger);
+      if (happyValue) happyValue.textContent = Math.floor(state.happiness);
+      if (staminaValue) staminaValue.textContent = Math.floor(state.stamina);
+      if (bondValue) bondValue.textContent = Math.floor(state.bond);
+      if (weightValue) weightValue.textContent = state.weight.toFixed(1);
+      mainHungerState.textContent = toStatusLabel(state.hunger, 'hunger');
+      mainHappyState.textContent = toStatusLabel(state.happiness, 'happy');
+      mainStaminaState.textContent = toStatusLabel(state.stamina, 'stamina');
+      healthComment.textContent = buildHealthComment();
+      detailHungerValue.textContent = Math.floor(state.hunger);
+      detailHappyValue.textContent = Math.floor(state.happiness);
+      detailStaminaValue.textContent = Math.floor(state.stamina);
+      detailBondValue.textContent = Math.floor(state.bond);
+      detailWeightValue.textContent = state.weight.toFixed(1);
+      detailGrowthValue.textContent = Math.floor(state.growth);
+      detailPersonalityValue.textContent = (PERSONALITY_PRESETS[state.personality] || PERSONALITY_PRESETS.playful).label;
+      detailTrainingAbility.textContent = getTrainingAbilityLabel(state.trainingCount);
       timeBadge.style.display = state.showTime ? 'block' : 'none';
       playArea.classList.toggle('is-drop-mode', gameMode === 'main' && Boolean(pendingAction && !placedAction));
     }
@@ -3796,6 +4468,44 @@
       return ((weight - 16) / (80 - 16)) * 100;
     }
 
+    function toStatusLabel(value, type) {
+      if (type === 'hunger') {
+        if (value < 20) return 'ぺこぺこ';
+        if (value < 40) return 'すこし空腹';
+        if (value < 70) return 'ふつう';
+        if (value < 90) return 'まんぷく';
+        return 'おなかいっぱい';
+      }
+      if (type === 'happy') {
+        if (value < 20) return 'しょんぼり';
+        if (value < 40) return 'おだやか';
+        if (value < 70) return 'ふつう';
+        if (value < 90) return 'ごきげん';
+        return 'るんるん';
+      }
+      if (value < 20) return 'へとへと';
+      if (value < 40) return 'つかれぎみ';
+      if (value < 70) return 'ふつう';
+      if (value < 90) return '元気';
+      return 'とっても元気';
+    }
+
+    function buildHealthComment() {
+      if (state.hunger < 25) return 'おなかがすいてそう';
+      if (state.stamina < 25) return 'ちょっとつかれている';
+      if (state.happiness > 75) return 'ごきげんで楽しそう';
+      if (state.happiness < 30) return 'すこしさみしそう';
+      return 'のんびり過ごしている';
+    }
+
+    function getTrainingAbilityLabel(trainingCount) {
+      if (trainingCount < 4) return 'まだまだ';
+      if (trainingCount < 8) return 'ふつう';
+      if (trainingCount < 14) return 'ちょっと得意';
+      if (trainingCount < 22) return 'かなり得意';
+      return 'すごい';
+    }
+
     function clampActionX(value, width) {
       return clamp(value, 240, width - 48);
     }
@@ -3814,6 +4524,12 @@
 
     function randomBetween(min, max) {
       return min + Math.random() * (max - min);
+    }
+
+
+    function startSparringMode() {
+      state.lastStatus = 'スパーリングは現在無効化中';
+      render();
     }
 
     function getCurrentStatusText() {
