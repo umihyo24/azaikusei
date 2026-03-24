@@ -1384,7 +1384,7 @@
       border: 4px solid rgba(255,255,255,0.92);
       box-shadow: 0 10px 24px rgba(59, 130, 246, 0.15);
       pointer-events: none;
-      z-index: 6;
+      z-index: 4;
     }
 
     .curling-house::after {
@@ -1410,7 +1410,7 @@
       border: 3px solid rgba(255,255,255,0.92);
       box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
       pointer-events: none;
-      z-index: 6;
+      z-index: 7;
     }
 
     .curling-stone.stone-light::before { background: #22c1c3; }
@@ -1735,7 +1735,7 @@
           </div>
           <div class="option-card">
             <div>
-              <h4>あっちむいてホイ</h4>
+              <h4>ホイ</h4>
               <p>専用画面で起動するミニゲーム（現在メンテ中）。</p>
             </div>
             <button class="action-btn" id="startLookAwayTrainingBtn">開始</button>
@@ -3052,18 +3052,21 @@
       const distance = Math.min(maxPull, distanceRaw);
       if (distance < 12) return;
       const ratio = distance / distanceRaw;
-      const pullX = pullXRaw * ratio;
-      const pullY = pullYRaw * ratio;
-      const control = CURLING_STONE_TYPES[curlingState.stone.type]?.control || 1;
+      let pullX = pullXRaw * ratio;
+      let pullY = pullYRaw * ratio;
+      if (Math.abs(pullX) < 10) pullX = 0;
+      if (Math.abs(pullY) < 10) pullY = 0;
+      const normalizedDistance = Math.hypot(pullX, pullY);
+      if (normalizedDistance < 8) return;
       curlingState.pull = {
         x: pullX,
         y: pullY,
-        len: distance,
+        len: normalizedDistance,
         angle: Math.atan2(pullY, pullX)
       };
-      curlingState.direction = { x: -(pullX / distance), y: -(pullY / distance) };
-      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x) * control;
-      curlingState.power = clamp(distance / maxPull, 0, 1);
+      curlingState.direction = { x: -(pullX / normalizedDistance), y: -(pullY / normalizedDistance) };
+      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x);
+      curlingState.power = clamp(normalizedDistance / maxPull, 0, 1);
       curlingState.statusText = '石を引っ張って、はなしてショット！';
     }
 
