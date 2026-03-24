@@ -1901,6 +1901,19 @@
     const statusBubble = document.getElementById('statusBubble');
     const moodBadge = document.getElementById('moodBadge');
     const timeBadge = document.getElementById('timeBadge');
+    const modeToggleBtn = document.getElementById('modeToggleBtn');
+    const minigameOverlay = document.getElementById('minigameOverlay');
+    const minigameArea = document.getElementById('minigameArea');
+    const minigameFish = document.getElementById('minigameFish');
+    const minigameScore = document.getElementById('minigameScore');
+    const minigameTime = document.getElementById('minigameTime');
+    const minigameResult = document.getElementById('minigameResult');
+    const minigameResultText = document.getElementById('minigameResultText');
+    const minigameStartScreen = document.getElementById('minigameStartScreen');
+    const minigameStartBtn = document.getElementById('minigameStartBtn');
+    const minigameRetryBtn = document.getElementById('minigameRetryBtn');
+    const minigameBackBtn = document.getElementById('minigameBackBtn');
+    const minigameResultBackBtn = document.getElementById('minigameResultBackBtn');
     const logList = document.getElementById('logList');
     const hungerBar = document.getElementById('hungerBar');
     const happyBar = document.getElementById('happyBar');
@@ -1993,38 +2006,54 @@
       needed: 5
     };
 
-    let gameMode = 'main';
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
     let curlingState = createCurlingState();
     let pendingAction = null;
     let placedAction = null;
-    const minigame = window.createMinigameModule({
-      area: minigameArea,
-      overlay: minigameOverlay,
-      fish: minigameFish,
-      scoreLabel: minigameScore,
-      timeLabel: minigameTime,
-      resultLayer: minigameResult,
-      resultText: minigameResultText,
-      startScreen: minigameStartScreen
-    });
+    const minigame = (window.createMinigameModule && minigameArea && minigameOverlay)
+      ? window.createMinigameModule({
+          area: minigameArea,
+          overlay: minigameOverlay,
+          fish: minigameFish,
+          scoreLabel: minigameScore,
+          timeLabel: minigameTime,
+          resultLayer: minigameResult,
+          resultText: minigameResultText,
+          startScreen: minigameStartScreen
+        })
+      : null;
+    let minigameState = minigame ? minigame.createState() : null;
+    const petInteraction = {
+      active: false,
+      pointerId: null,
+      lastX: 0,
+      lastY: 0,
+      distance: 0,
+      tapCount: 0,
+      lastTapTime: 0
+    };
+    const AUTO_BEHAVIOR_CHECK_MIN = 5;
+    const AUTO_BEHAVIOR_CHECK_MAX = 10;
+    const AUTO_BEHAVIOR_TRIGGER_RATE = 0.32;
+    let autoBehaviorTimer = randomAutoBehaviorInterval();
+    let sparringState = createSparringState();
+    let sparringInput = 0;
+    let sparringPointerX = null;
 
     init();
 
     function init() {
-      minigameState = minigame.createState();
+      if (minigame) minigameState = minigame.createState();
       placeSealInitially();
       renderFoodList();
       renderToyList();
       bindEvents();
       applyOfflineProgress();
       updateStage();
-      initializeSparringLayout();
       render();
       window.startIceSlideMode = startIceSlideMode;
-      window.startSparringMode = startSparringMode;
       requestAnimationFrame(loop);
       setInterval(saveState, 5000);
     }
@@ -2110,7 +2139,9 @@
       document.querySelectorAll('.nav-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           if (btn.dataset.mode === 'lookAway') {
-            startLookAwayGame();
+            // 壊れている追加機能は一時無効化
+            state.lastStatus = 'このモードは現在メンテナンス中';
+            render();
             return;
           }
           openPanel(btn.dataset.panel);
@@ -2137,13 +2168,13 @@
       startTrainingBtn.addEventListener('click', startTraining);
       trainingTarget.addEventListener('click', onTrainingTap);
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
-      collectedDropBtn.addEventListener('click', dropCollectedItem);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
       startCurlingBtn.addEventListener('click', startCurling);
       closeCurlingBtn.addEventListener('click', stopCurling);
       curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
       bindCurlingControls();
+      bindMinigameControls();
 
       timeToggle.checked = state.showTime;
       volumeSlider.value = state.volume;
@@ -2165,15 +2196,14 @@
         state = defaultState();
         training = { active: false, taps: 0, needed: 5 };
         gameMode = 'main';
-        minigameState = minigame.createState();
+        if (minigame) minigameState = minigame.createState();
         stopIceSlideMode();
         stopCurling();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
         placeSealInitially();
-        initializeSparringLayout();
-        renderFoodList();
+          renderFoodList();
         renderToyList();
         render();
         saveState();
@@ -2187,6 +2217,49 @@
           renderCurling();
         }
       });
+    }
+
+
+    function bindMinigameControls() {
+      if (!minigame || !modeToggleBtn) return;
+      modeToggleBtn.addEventListener('click', () => {
+        if (gameMode === 'minigame') {
+          closeMinigame();
+        } else {
+          openMinigame();
+        }
+      });
+      if (minigameStartBtn) minigameStartBtn.addEventListener('click', () => minigame.start(minigameState));
+      if (minigameRetryBtn) minigameRetryBtn.addEventListener('click', () => minigame.start(minigameState));
+      if (minigameFish) minigameFish.addEventListener('click', () => minigame.catchFish(minigameState));
+      if (minigameBackBtn) minigameBackBtn.addEventListener('click', closeMinigame);
+      if (minigameResultBackBtn) minigameResultBackBtn.addEventListener('click', closeMinigame);
+    }
+
+    function openMinigame() {
+      if (!minigame || !minigameState) return;
+      closePanels();
+      gameMode = 'minigame';
+      minigame.prepare(minigameState);
+      renderMinigame();
+    }
+
+    function closeMinigame() {
+      if (!minigame || !minigameState) return;
+      gameMode = 'main';
+      minigame.stop(minigameState);
+      renderMain();
+    }
+
+    function renderMinigame() {
+      if (!minigame || !minigameState) return;
+      minigame.render(minigameState, true);
+      if (modeToggleBtn) modeToggleBtn.textContent = 'メインへ';
+    }
+
+    function renderMain() {
+      if (minigame && minigameState) minigame.render(minigameState, false);
+      if (modeToggleBtn) modeToggleBtn.textContent = 'ミニゲームへ';
     }
 
     function createIceSlideState() {
@@ -3169,11 +3242,20 @@
         requestAnimationFrame(loop);
         return;
       }
+      if (gameMode === 'minigame') {
+        updateMinigame(dt);
+        render();
+        requestAnimationFrame(loop);
+        return;
+      }
       tickState(dt);
       tickSeal(dt);
+      render();
+      requestAnimationFrame(loop);
     }
 
     function updateMinigame(dt) {
+      if (!minigame || !minigameState) return;
       minigame.update(minigameState, dt);
     }
 
@@ -3420,6 +3502,7 @@
       // 時間経過で減衰・自然回復する値をまとめて更新する。
       applyDelta(state, buildPassiveStateDelta(dt));
       applyPassiveStateBonuses(dt);
+      collectPassiveItems(dt);
       handleAutoBehavior(dt);
       clampState();
       updateTimeTheme();
@@ -3814,6 +3897,12 @@
 
     function randomBetween(min, max) {
       return min + Math.random() * (max - min);
+    }
+
+
+    function startSparringMode() {
+      state.lastStatus = 'スパーリングは現在無効化中';
+      render();
     }
 
     function getCurrentStatusText() {
