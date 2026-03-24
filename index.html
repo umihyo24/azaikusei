@@ -210,6 +210,10 @@
       transform: scale(1.06) translateY(-2px);
     }
 
+    .seal.is-petting {
+      filter: brightness(1.04);
+    }
+
     .seal.is-sleepy {
       filter: saturate(0.85) brightness(0.95);
     }
@@ -272,10 +276,25 @@
       z-index: 4;
     }
 
+    .pet-effect {
+      position: absolute;
+      font-size: 22px;
+      animation: petBurst 0.9s ease-out forwards;
+      pointer-events: none;
+      z-index: 4;
+      filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.8));
+    }
+
     @keyframes floatUp {
       0% { opacity: 0; transform: translateY(0) scale(.9); }
       15% { opacity: 1; }
       100% { opacity: 0; transform: translateY(-38px) scale(1.05); }
+    }
+
+    @keyframes petBurst {
+      0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+      20% { opacity: 1; }
+      100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, -34px)) scale(1.15); }
     }
 
     @keyframes foodPulse {
@@ -791,7 +810,8 @@
 
         // settings: UI 表示やローカル設定
         volume: 70,
-        showTime: true
+        showTime: true,
+        lastPetTime: 0
       };
     }
 
@@ -975,6 +995,7 @@
     let iceSlideState = createIceSlideState();
     let pendingAction = null;
     let placedAction = null;
+    let petInteraction = createPetInteractionState();
 
     init();
 
@@ -1059,7 +1080,12 @@
       });
 
       playArea.addEventListener('click', onPlayAreaClick);
-      sealButton.addEventListener('click', petSeal);
+      playArea.addEventListener('pointerdown', onPetPointerDown);
+      playArea.addEventListener('pointermove', onPetPointerMove);
+      playArea.addEventListener('pointerup', onPetPointerUp);
+      playArea.addEventListener('pointercancel', resetPetInteraction);
+      window.addEventListener('pointerup', onPetPointerUp);
+      window.addEventListener('pointercancel', resetPetInteraction);
       startTrainingBtn.addEventListener('click', startTraining);
       trainingTarget.addEventListener('click', onTrainingTap);
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
@@ -1108,6 +1134,18 @@
         vy: 0,
         angle: 0,
         debugTimer: 0
+      };
+    }
+
+    function createPetInteractionState() {
+      return {
+        active: false,
+        pointerId: null,
+        lastX: 0,
+        lastY: 0,
+        distance: 0,
+        tapCount: 0,
+        lastTapTime: 0
       };
     }
 
@@ -1500,37 +1538,109 @@
       playArea.dataset.dropLabel = '';
     }
 
+    function onPetPointerDown(event) {
+      if (!canStartPetInteraction()) return;
+      if (!isPointInsideSeal(event.clientX, event.clientY)) return;
+      petInteraction.active = true;
+      petInteraction.pointerId = event.pointerId;
+      petInteraction.lastX = event.clientX;
+      petInteraction.lastY = event.clientY;
+      petInteraction.distance = 0;
+    }
+
+    function onPetPointerMove(event) {
+      if (!petInteraction.active || petInteraction.pointerId !== event.pointerId) return;
+
+      const moveX = event.clientX - petInteraction.lastX;
+      const moveY = event.clientY - petInteraction.lastY;
+      petInteraction.distance += Math.hypot(moveX, moveY);
+      petInteraction.lastX = event.clientX;
+      petInteraction.lastY = event.clientY;
+
+      if (!isPointInsideSeal(event.clientX, event.clientY)) return;
+      if (petInteraction.distance < 52) return;
+
+      petInteraction.distance = 0;
+      petSeal(event.clientX, event.clientY);
+      resetPetDrag();
+    }
+
+    function onPetPointerUp(event) {
+      if (!petInteraction.active || petInteraction.pointerId !== event.pointerId) return;
+
+      if (isPointInsideSeal(event.clientX, event.clientY)) {
+        const now = Date.now();
+        petInteraction.tapCount = now - petInteraction.lastTapTime <= 450
+          ? petInteraction.tapCount + 1
+          : 1;
+        petInteraction.lastTapTime = now;
+
+        if (petInteraction.tapCount >= 3) {
+          petSeal(event.clientX, event.clientY);
+          petInteraction.tapCount = 0;
+        }
+      }
+
+      resetPetDrag();
+    }
+
+    function resetPetInteraction() {
+      resetPetDrag();
+      petInteraction.tapCount = 0;
+      petInteraction.lastTapTime = 0;
+    }
+
+    function resetPetDrag() {
+      petInteraction.active = false;
+      petInteraction.pointerId = null;
+      petInteraction.distance = 0;
+    }
+
+    function canStartPetInteraction() {
+      return !iceSlideMode && !pendingAction && !placedAction && !seal.actionTarget;
+    }
+
+    function isPointInsideSeal(clientX, clientY) {
+      const rect = sealButton.getBoundingClientRect();
+      return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+    }
+
     function updateActionDropPosition() {
       if (!pendingAction || !placedAction) return;
       actionDrop.style.left = `${placedAction.x - 32}px`;
       actionDrop.style.top = `${placedAction.y - 32}px`;
     }
 
-    function petSeal(e) {
-      if (pendingAction && !placedAction) return;
+    function petSeal(clientX, clientY) {
+      if (!canStartPetInteraction()) return;
+      const now = Date.now();
+      if (now - state.lastPetTime < 1000) return;
+
       applyDelta(state, buildPetDelta());
-      if (state.happiness > 80) state.fish += 2;
+      state.lastPetTime = now;
       state.lastStatus = randomFrom([
-        'うれしそうに こちらを見ている',
-        'ぷにっとして ごきげん',
-        'しっぽを ぱたぱた している',
-        'なでられて まんぞくそう'
+        'なでられて うれしそうに している',
+        'きもちよさそうに 目を細めている',
+        'しっぽを ぱたぱた して よろこんでいる',
+        'なでられて ちょっと 甘えてきた'
       ]);
       updateStage();
       clampState();
       sealButton.classList.add('is-pet');
+      sealButton.classList.add('is-petting');
+      setSealMode('idle', 0.45);
       setTimeout(() => sealButton.classList.remove('is-pet'), 180);
-      spawnFloatText(e ? e.clientX : null, e ? e.clientY : null, '+なかよし');
+      setTimeout(() => sealButton.classList.remove('is-petting'), 260);
+      spawnFloatText(clientX, clientY, 'なでた！');
+      spawnPetEffect(clientX, clientY);
       render();
       saveState();
     }
 
     function buildPetDelta() {
       return {
-        happiness: 4,
-        bond: 2,
-        stamina: -1,
-        growth: 1
+        happiness: 2,
+        bond: 1
       };
     }
 
@@ -1842,9 +1952,11 @@
       const scale = [0.8, 0.92, 1.02, 1.12][state.stage] || 1;
       const rotation = seal.mode === 'sleep' ? -7 : seal.mode === 'sit' ? -3 : 0;
       const facingScale = seal.facing === -1 ? -1 : 1;
+      const petLift = sealButton.classList.contains('is-pet') ? -6 : 0;
+      const petRotation = sealButton.classList.contains('is-petting') ? 4 : 0;
       sealButton.style.left = `${seal.x - 74}px`;
-      sealButton.style.top = `${baseY - 74}px`;
-      sealButton.style.transform = `scale(${facingScale * scale}, ${scale}) rotate(${rotation}deg)`;
+      sealButton.style.top = `${baseY - 74 + petLift}px`;
+      sealButton.style.transform = `scale(${facingScale * scale}, ${scale}) rotate(${rotation + petRotation}deg)`;
       sealShadow.style.left = `${seal.x - 60}px`;
       sealShadow.style.top = `${seal.y + 48}px`;
       sealShadow.style.width = `${118 * scale}px`;
@@ -1888,6 +2000,29 @@
       el.style.top = `${y}px`;
       playArea.appendChild(el);
       setTimeout(() => el.remove(), 1000);
+    }
+
+    function spawnPetEffect(clientX, clientY) {
+      const rect = playArea.getBoundingClientRect();
+      const baseX = clientX ? clientX - rect.left : seal.x;
+      const baseY = clientY ? clientY - rect.top : seal.y - 16;
+      const bursts = [
+        { icon: '💗', dx: -22, dy: -36 },
+        { icon: '✨', dx: 0, dy: -48 },
+        { icon: '💗', dx: 20, dy: -30 }
+      ];
+
+      bursts.forEach((burst) => {
+        const el = document.createElement('div');
+        el.className = 'pet-effect';
+        el.textContent = burst.icon;
+        el.style.left = `${baseX}px`;
+        el.style.top = `${baseY}px`;
+        el.style.setProperty('--dx', `${burst.dx}px`);
+        el.style.setProperty('--dy', `${burst.dy}px`);
+        playArea.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+      });
     }
 
     function getMoveSpeedScale(chasingAction) {
