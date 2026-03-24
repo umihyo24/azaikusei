@@ -1237,11 +1237,11 @@
     .curling-info {
       position: absolute;
       left: 20px;
-      top: 78px;
+      bottom: 18px;
       z-index: 2;
       display: grid;
       gap: 10px;
-      width: min(260px, calc(100% - 40px));
+      width: min(290px, calc(100% - 40px));
     }
 
     .curling-card {
@@ -1260,10 +1260,37 @@
       font-size: 14px;
     }
 
+    .curling-guide {
+      white-space: pre-line;
+      line-height: 1.45;
+    }
+
     .curling-score {
       font-size: 28px;
       font-weight: 800;
       color: #1d4f91;
+    }
+
+    .curling-stone-dots {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .curling-stone-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #93c5fd;
+      background: #60a5fa;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.6);
+    }
+
+    .curling-stone-dot.used {
+      background: #cbd5e1;
+      border-color: #94a3b8;
+      opacity: 0.65;
     }
 
     .curling-power {
@@ -1793,11 +1820,12 @@
       <div class="curling-info">
         <div class="curling-card">
           <strong>あそびかた</strong>
-          <div id="curlingStatusText">3〜5投のショットで合計点を狙おう。石の重さで挙動が変わるよ。</div>
+          <div class="curling-guide" id="curlingStatusText">あざらしストーンを引っぱって、はなしてショット\nわっかの中心に近いほど高得点</div>
         </div>
         <div class="curling-card">
           <strong>スコア</strong>
           <div class="curling-score" id="curlingScoreValue">0</div>
+          <div class="curling-stone-dots" id="curlingStoneDots" aria-label="残りストーン"></div>
         </div>
       </div>
       <div class="curling-result" id="curlingResultCard">
@@ -2110,6 +2138,7 @@
     const curlingPowerText = document.getElementById('curlingPowerText');
     const curlingScoreValue = document.getElementById('curlingScoreValue');
     const curlingStatusText = document.getElementById('curlingStatusText');
+    const curlingStoneDots = document.getElementById('curlingStoneDots');
     const curlingResultCard = document.getElementById('curlingResultCard');
     const curlingResultText = document.getElementById('curlingResultText');
 
@@ -2702,6 +2731,7 @@
         chargeDirection: 1,
         direction: { x: 0, y: -1 },
         directionAngle: -Math.PI / 2,
+        pull: { x: 0, y: 0, len: 0, angle: 0 },
         resultText: 'まだ投げていないよ。',
         statusText: '3〜5投で合計スコアを狙おう。',
         house: { x: 0, y: 0, rings: 120 },
@@ -2901,7 +2931,7 @@
       curlingState.stone.vy = 0;
       curlingState.direction = { x: 0, y: -1 };
       curlingState.directionAngle = -Math.PI / 2;
-      curlingState.shotsTotal = randomFrom([3, 4, 5]);
+      curlingState.shotsTotal = 5;
       curlingState.shotsLeft = curlingState.shotsTotal;
       curlingState.score = 0;
       curlingState.placedStones = [];
@@ -2913,9 +2943,9 @@
 
     function buildCurlingTargets(rect) {
       return [
-        { id: 'left-large', x: rect.width * 0.28, y: rect.height * 0.58, radius: 104, score: 10, label: '10点' },
-        { id: 'center-medium', x: rect.width * 0.52, y: rect.height * 0.43, radius: 82, score: 30, label: '30点' },
-        { id: 'right-small', x: rect.width * 0.75, y: rect.height * 0.30, radius: 58, score: 80, label: '80点' }
+        { id: 'left-large', x: rect.width * 0.30, y: rect.height * 0.44, radius: 104, score: 10, label: '10点' },
+        { id: 'center-medium', x: rect.width * 0.54, y: rect.height * 0.32, radius: 82, score: 30, label: '30点' },
+        { id: 'right-small', x: rect.width * 0.76, y: rect.height * 0.22, radius: 58, score: 80, label: '80点' }
       ];
     }
 
@@ -2979,6 +3009,7 @@
       curlingState.stone.vy = 0;
       curlingState.direction = { x: 0, y: -1 };
       curlingState.directionAngle = -Math.PI / 2;
+      curlingState.pull = { x: 0, y: 0, len: 0, angle: 0 };
       curlingState.stone.type = randomFrom(Object.keys(CURLING_STONE_TYPES));
       curlingState.resultText = `${curlingState.shotsTotal - curlingState.shotsLeft + 1}/${curlingState.shotsTotal}投目 (${curlingState.stone.type})`;
     }
@@ -3006,27 +3037,37 @@
     function onCurlingPointerUp() {
       if (!curlingState.active) return;
       if (!curlingState.dragging) return;
-      const pullStrength = Math.hypot(curlingState.direction.x, curlingState.direction.y) * curlingState.power;
+      const pullStrength = curlingState.power;
       curlingState.dragging = false;
       if (pullStrength > 0.08) {
         shootStone();
       }
+      curlingState.pull = { x: 0, y: 0, len: 0, angle: 0 };
       renderCurling();
     }
 
     function updateCurlingAim(event) {
       const point = getPointerPosition(event, curlingSheet);
       if (!point) return;
-      const dx = curlingState.stone.x - point.x;
-      const dy = curlingState.stone.y - point.y;
-      const distance = Math.hypot(dx, dy);
-      if (distance < 12) return;
+      const pullXRaw = point.x - curlingState.stone.x;
+      const pullYRaw = point.y - curlingState.stone.y;
+      const distanceRaw = Math.hypot(pullXRaw, pullYRaw);
       const maxPull = 180;
-      const normalizedPull = Math.min(maxPull, distance);
+      const distance = Math.min(maxPull, distanceRaw);
+      if (distance < 12) return;
+      const ratio = distance / distanceRaw;
+      const pullX = pullXRaw * ratio;
+      const pullY = pullYRaw * ratio;
       const control = CURLING_STONE_TYPES[curlingState.stone.type]?.control || 1;
-      curlingState.direction = { x: dx / distance, y: dy / distance };
+      curlingState.pull = {
+        x: pullX,
+        y: pullY,
+        len: distance,
+        angle: Math.atan2(pullY, pullX)
+      };
+      curlingState.direction = { x: -(pullX / distance), y: -(pullY / distance) };
       curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x) * control;
-      curlingState.power = clamp(normalizedPull / maxPull, 0.12, 1);
+      curlingState.power = clamp(distance / maxPull, 0, 1);
       curlingState.statusText = '石を引っ張って、はなしてショット！';
     }
 
@@ -3052,6 +3093,7 @@
       curlingState.statusText = `${curlingState.stone.type} stone がすべっている…`;
       curlingState.resultText = 'ストーンが止まるまで見守ろう。';
       curlingState.hasScore = false;
+      curlingState.pull = { x: 0, y: 0, len: 0, angle: 0 };
       renderCurling();
     }
 
@@ -3170,26 +3212,6 @@
         curlingState.stone.y = maxY;
         curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * bounceFactor;
       }
-
-      curlingState.hasScore = true;
-      curlingState.gameFinished = true;
-      curlingState.statusText = `最終スコア ${curlingState.score}点。`;
-      curlingState.resultText = buildCurlingResultText(curlingState.score);
-    }
-
-    function addSettledCurlingStone() {
-      const settled = {
-        x: curlingState.stone.x,
-        y: curlingState.stone.y,
-        vx: curlingState.stone.vx,
-        vy: curlingState.stone.vy,
-        type: curlingState.stone.type
-      };
-      curlingState.placedStones.push(settled);
-      const el = document.createElement('div');
-      el.className = `curling-stone settled stone-${settled.type}`;
-      curlingSheet.appendChild(el);
-      curlingState.settledStoneElements.push(el);
     }
 
     function finalizeCurlingShot() {
@@ -3242,9 +3264,10 @@
       if (curlingPowerFill) curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
       if (curlingPowerText) curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
       curlingScoreValue.textContent = String(curlingState.score);
-      curlingStatusText.textContent = `${curlingState.statusText}（残り ${curlingState.shotsLeft}投）`;
+      curlingStatusText.textContent = 'あざらしストーンを引っぱって、はなしてショット\nわっかの中心に近いほど高得点';
       curlingResultText.textContent = curlingState.resultText;
       curlingResultCard.classList.toggle('visible', curlingState.shotTaken || curlingState.hasScore);
+      renderCurlingStoneDots();
 
       curlingState.placedStones.forEach((stone, index) => {
         const el = curlingState.settledStoneElements[index];
@@ -3253,18 +3276,29 @@
         el.style.top = `${stone.y}px`;
       });
 
-      const aimLength = 110;
+      const aimLength = curlingState.pull.len;
       curlingAimLine.style.left = `${curlingState.stone.x}px`;
       curlingAimLine.style.top = `${curlingState.stone.y}px`;
       curlingAimLine.style.width = `${aimLength}px`;
-      curlingAimLine.style.transform = `rotate(${curlingState.directionAngle}rad)`;
+      curlingAimLine.style.transform = `rotate(${curlingState.pull.angle}rad)`;
       curlingAimLine.classList.toggle('visible', curlingState.dragging && curlingState.aiming && !curlingState.shotTaken);
-      curlingAimAnchor.style.left = `${curlingState.stone.x + curlingState.direction.x * aimLength}px`;
-      curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.direction.y * aimLength}px`;
+      curlingAimAnchor.style.left = `${curlingState.stone.x + curlingState.pull.x}px`;
+      curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.pull.y}px`;
       curlingAimAnchor.classList.toggle('visible', curlingState.dragging && curlingState.aiming && !curlingState.shotTaken);
 
       if (curlingLaunchBtn) curlingLaunchBtn.disabled = curlingState.shotTaken || curlingState.gameFinished;
       curlingRetryBtn.disabled = !curlingState.active;
+    }
+
+    function renderCurlingStoneDots() {
+      if (!curlingStoneDots) return;
+      const used = curlingState.shotsTotal - curlingState.shotsLeft;
+      curlingStoneDots.innerHTML = '';
+      for (let i = 0; i < curlingState.shotsTotal; i += 1) {
+        const dot = document.createElement('span');
+        dot.className = `curling-stone-dot${i < used ? ' used' : ''}`;
+        curlingStoneDots.appendChild(dot);
+      }
     }
 
     function initializeIceSlideState() {
