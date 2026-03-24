@@ -1157,6 +1157,258 @@
       margin-bottom: 16px;
     }
 
+    .curling-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: linear-gradient(180deg, rgba(228, 244, 255, 0.97) 0%, rgba(244, 250, 255, 0.99) 100%);
+      z-index: 13;
+    }
+
+    .curling-overlay.open {
+      display: block;
+    }
+
+    .curling-header {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 2;
+      gap: 12px;
+    }
+
+    .curling-badge,
+    .curling-close {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+      border: 2px solid #cfe6fb;
+      color: #31577a;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .curling-close {
+      cursor: pointer;
+    }
+
+    .curling-info {
+      position: absolute;
+      left: 20px;
+      top: 78px;
+      z-index: 2;
+      display: grid;
+      gap: 10px;
+      width: min(260px, calc(100% - 40px));
+    }
+
+    .curling-card {
+      background: rgba(255,255,255,0.9);
+      border: 2px solid #d5e2f1;
+      border-radius: 16px;
+      padding: 12px 14px;
+      color: #46607c;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .curling-card strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #274968;
+      font-size: 14px;
+    }
+
+    .curling-score {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1d4f91;
+    }
+
+    .curling-power {
+      display: grid;
+      gap: 8px;
+    }
+
+    .curling-power-bar {
+      height: 12px;
+      background: #dceaf8;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #c2d8ee;
+    }
+
+    .curling-power-bar span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #7ec6ff 0%, #3e97f2 55%, #2563eb 100%);
+      border-radius: inherit;
+    }
+
+    .curling-controls {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      bottom: 18px;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .curling-launch-btn,
+    .curling-retry-btn {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .curling-launch-btn {
+      background: #1d8be6;
+      color: white;
+    }
+
+    .curling-retry-btn {
+      background: rgba(255,255,255,0.92);
+      color: #31577a;
+      border: 2px solid #cfe6fb;
+    }
+
+    .curling-launch-btn:disabled,
+    .curling-retry-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .curling-sheet {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    .curling-sheet::before {
+      content: "";
+      position: absolute;
+      inset: 16px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(215, 238, 255, 0.65) 100%);
+      border: 2px solid rgba(147, 197, 253, 0.45);
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,0.4);
+      pointer-events: none;
+    }
+
+    .curling-house {
+      position: absolute;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background:
+        radial-gradient(circle, #ffffff 0 12%, #d22f5d 12% 25%, #ffffff 25% 40%, #3d92ea 40% 57%, #ffffff 57% 74%, rgba(61, 146, 234, 0.16) 74% 100%);
+      border: 4px solid rgba(255,255,255,0.92);
+      box-shadow: 0 10px 24px rgba(59, 130, 246, 0.15);
+      pointer-events: none;
+    }
+
+    .curling-house::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e3a8a;
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.8);
+    }
+
+    .curling-stone {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle at 35% 35%, #f9fafb 0%, #cbd5e1 38%, #64748b 78%, #475569 100%);
+      border: 3px solid rgba(255,255,255,0.92);
+      box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
+      pointer-events: none;
+    }
+
+    .curling-stone::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 4px;
+      width: 22px;
+      height: 11px;
+      border-radius: 999px 999px 6px 6px;
+      transform: translateX(-50%);
+      background: #ef4444;
+    }
+
+    .curling-aim-line {
+      position: absolute;
+      height: 4px;
+      transform-origin: left center;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.95) 0%, rgba(59, 130, 246, 0.2) 100%);
+      border-radius: 999px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.14s ease;
+    }
+
+    .curling-aim-line.visible {
+      opacity: 1;
+    }
+
+    .curling-aim-anchor {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #2563eb;
+      background: rgba(255,255,255,0.94);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .curling-aim-anchor.visible {
+      opacity: 1;
+    }
+
+    .curling-result {
+      position: absolute;
+      right: 20px;
+      top: 78px;
+      z-index: 2;
+      width: min(240px, calc(100% - 40px));
+      background: rgba(255,255,255,0.92);
+      border: 2px solid #d5e2f1;
+      border-radius: 18px;
+      padding: 14px;
+      color: #31577a;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+      display: none;
+    }
+
+    .curling-result.visible {
+      display: block;
+    }
+
     .night .game-shell,
     .night .game-shell .top-wave {
       transition: background 0.35s ease;
@@ -1396,6 +1648,13 @@
             </div>
             <button class="action-btn" id="startIceSlideBtn">開始</button>
           </div>
+          <div class="setting-row">
+            <div>
+              <strong>カーリング</strong>
+              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">1ショットで中心をねらう独立ミニゲーム</div>
+            </div>
+            <button class="action-btn" id="startCurlingBtn">開始</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1412,29 +1671,40 @@
       </div>
     </div>
 
-    <div class="look-away-overlay" id="lookAwayOverlay">
-      <div class="look-away-card">
-        <div class="look-away-header">
-          <h3 class="look-away-title">あっちむいてホイ</h3>
-          <button class="ice-slide-close" id="closeLookAwayBtn">もどる</button>
+    <div class="curling-overlay" id="curlingOverlay">
+      <div class="curling-header">
+        <div class="curling-badge" id="curlingModeBadge">カーリング ミニゲーム</div>
+        <button class="curling-close" id="closeCurlingBtn">もどる</button>
+      </div>
+      <div class="curling-info">
+        <div class="curling-card">
+          <strong>あそびかた</strong>
+          <div id="curlingStatusText">ドラッグで方向を決めて、ボタン長押しでパワーをためよう。</div>
         </div>
-        <div class="look-away-round" id="lookAwayRound">ラウンド 1 / 3</div>
-        <div class="look-away-seal" id="lookAwayEnemyFace">🦭❔</div>
-        <div class="look-away-enemy" id="lookAwayEnemyText">あざらしが どっちを向くかな？</div>
-        <div class="look-away-result" id="lookAwayResultText">4ほうこう から えらぼう！</div>
-        <div class="look-away-score">
-          <div class="look-away-score-chip" id="lookAwayWins">0勝</div>
-          <div class="look-away-score-chip" id="lookAwayLosses">0敗</div>
+        <div class="curling-card">
+          <strong>スコア</strong>
+          <div class="curling-score" id="curlingScoreValue">0</div>
         </div>
-        <div class="look-away-subtext" id="lookAwaySummary">3本勝負で、同じ向きを当てたら きみの勝ち！</div>
-        <div class="look-away-directions" id="lookAwayDirections">
-          <button class="look-away-btn" data-look-away-direction="up">⬆️ うえ</button>
-          <button class="look-away-btn" data-look-away-direction="down">⬇️ した</button>
-          <button class="look-away-btn" data-look-away-direction="left">⬅️ ひだり</button>
-          <button class="look-away-btn" data-look-away-direction="right">➡️ みぎ</button>
+      </div>
+      <div class="curling-result" id="curlingResultCard">
+        <strong>ショット結果</strong>
+        <div id="curlingResultText">まだ投げていないよ。</div>
+      </div>
+      <div class="curling-sheet" id="curlingSheet">
+        <div class="curling-house" id="curlingHouse"></div>
+        <div class="curling-aim-line" id="curlingAimLine"></div>
+        <div class="curling-aim-anchor" id="curlingAimAnchor"></div>
+        <div class="curling-stone" id="curlingStone"></div>
+      </div>
+      <div class="curling-controls">
+        <div class="curling-card curling-power">
+          <strong>パワー</strong>
+          <div class="curling-power-bar"><span id="curlingPowerFill"></span></div>
+          <div id="curlingPowerText">0%</div>
         </div>
-        <div class="look-away-footer">
-          <button class="action-btn" id="retryLookAwayBtn">リトライ</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="curling-launch-btn" id="curlingLaunchBtn">長押しでショット</button>
+          <button class="curling-retry-btn" id="curlingRetryBtn">リトライ</button>
         </div>
       </div>
     </div>
@@ -1660,16 +1930,22 @@
     const iceSlideArena = document.getElementById('iceSlideArena');
     const iceSlideSeal = document.getElementById('iceSlideSeal');
     const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
-    const lookAwayOverlay = document.getElementById('lookAwayOverlay');
-    const lookAwayRound = document.getElementById('lookAwayRound');
-    const lookAwayEnemyFace = document.getElementById('lookAwayEnemyFace');
-    const lookAwayEnemyText = document.getElementById('lookAwayEnemyText');
-    const lookAwayResultText = document.getElementById('lookAwayResultText');
-    const lookAwayWins = document.getElementById('lookAwayWins');
-    const lookAwayLosses = document.getElementById('lookAwayLosses');
-    const lookAwaySummary = document.getElementById('lookAwaySummary');
-    const retryLookAwayBtn = document.getElementById('retryLookAwayBtn');
-    const closeLookAwayBtn = document.getElementById('closeLookAwayBtn');
+    const startCurlingBtn = document.getElementById('startCurlingBtn');
+    const curlingOverlay = document.getElementById('curlingOverlay');
+    const closeCurlingBtn = document.getElementById('closeCurlingBtn');
+    const curlingSheet = document.getElementById('curlingSheet');
+    const curlingHouse = document.getElementById('curlingHouse');
+    const curlingStone = document.getElementById('curlingStone');
+    const curlingAimLine = document.getElementById('curlingAimLine');
+    const curlingAimAnchor = document.getElementById('curlingAimAnchor');
+    const curlingLaunchBtn = document.getElementById('curlingLaunchBtn');
+    const curlingRetryBtn = document.getElementById('curlingRetryBtn');
+    const curlingPowerFill = document.getElementById('curlingPowerFill');
+    const curlingPowerText = document.getElementById('curlingPowerText');
+    const curlingScoreValue = document.getElementById('curlingScoreValue');
+    const curlingStatusText = document.getElementById('curlingStatusText');
+    const curlingResultCard = document.getElementById('curlingResultCard');
+    const curlingResultText = document.getElementById('curlingResultText');
 
     const ICE_SLIDE_CONFIG = {
       initialSpeed: 180,
@@ -1717,18 +1993,11 @@
       needed: 5
     };
 
-    const LOOK_AWAY_DIRECTIONS = {
-      up: { label: 'うえ', emoji: '⬆️' },
-      down: { label: 'した', emoji: '⬇️' },
-      left: { label: 'ひだり', emoji: '⬅️' },
-      right: { label: 'みぎ', emoji: '➡️' }
-    };
-
+    let gameMode = 'main';
     let iceSlideMode = false;
     let iceSlideInput = 0;
     let iceSlideState = createIceSlideState();
-    let gameMode = 'main';
-    let lookAwayState = createLookAwayState();
+    let curlingState = createCurlingState();
     let pendingAction = null;
     let placedAction = null;
     const minigame = window.createMinigameModule({
@@ -1870,13 +2139,11 @@
       startIceSlideBtn.addEventListener('click', startIceSlideMode);
       collectedDropBtn.addEventListener('click', dropCollectedItem);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
-      retryLookAwayBtn.addEventListener('click', resetLookAwayGame);
-      closeLookAwayBtn.addEventListener('click', stopLookAwayGame);
-      document.querySelectorAll('[data-look-away-direction]').forEach((btn) => {
-        btn.addEventListener('click', () => chooseLookAwayDirection(btn.dataset.lookAwayDirection));
-      });
+      startCurlingBtn.addEventListener('click', startCurling);
+      closeCurlingBtn.addEventListener('click', stopCurling);
+      curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
-      bindSparringControls();
+      bindCurlingControls();
 
       timeToggle.checked = state.showTime;
       volumeSlider.value = state.volume;
@@ -1900,8 +2167,7 @@
         gameMode = 'main';
         minigameState = minigame.createState();
         stopIceSlideMode();
-        stopLookAwayGame();
-        lookAwayState = createLookAwayState();
+        stopCurling();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
@@ -1916,7 +2182,10 @@
       window.addEventListener('beforeunload', saveState);
       window.addEventListener('resize', () => {
         placeSealInitially();
-        initializeSparringLayout();
+        if (curlingState.active) {
+          initializeCurlingLayout();
+          renderCurling();
+        }
       });
     }
 
@@ -1931,97 +2200,25 @@
       };
     }
 
-
-    function createLookAwayState() {
+    function createCurlingState() {
       return {
         active: false,
-        round: 1,
-        maxRounds: 3,
-        wins: 0,
-        losses: 0,
-        playerChoice: null,
-        enemyChoice: null,
-        resultText: ''
+        stone: { x: 0, y: 0, vx: 0, vy: 0 },
+        aiming: true,
+        power: 0,
+        score: 0,
+        shotTaken: false,
+        dragging: false,
+        charging: false,
+        chargeDirection: 1,
+        direction: { x: 0, y: -1 },
+        directionAngle: -Math.PI / 2,
+        resultText: 'まだ投げていないよ。',
+        statusText: 'ドラッグで方向を決めて、ボタン長押しでパワーをためよう。',
+        house: { x: 0, y: 0, rings: 120 },
+        arena: { width: 0, height: 0, stoneRadius: 24 },
+        hasScore: false
       };
-    }
-
-    function startLookAwayGame() {
-      closePanels();
-      stopIceSlideMode();
-      gameMode = 'lookAway';
-      lookAwayState = createLookAwayState();
-      lookAwayState.active = true;
-      lookAwayState.resultText = '4ほうこう から えらぼう！';
-      renderLookAway();
-    }
-
-    function chooseLookAwayDirection(direction) {
-      if (gameMode !== 'lookAway' || !lookAwayState.active || !LOOK_AWAY_DIRECTIONS[direction]) return;
-      lookAwayState.playerChoice = direction;
-      resolveLookAwayRound();
-    }
-
-    function resolveLookAwayRound() {
-      if (!lookAwayState.playerChoice) return;
-      const directions = Object.keys(LOOK_AWAY_DIRECTIONS);
-      const enemyChoice = randomFrom(directions);
-      const isWin = lookAwayState.playerChoice === enemyChoice;
-
-      lookAwayState.enemyChoice = enemyChoice;
-      if (isWin) {
-        lookAwayState.wins += 1;
-        lookAwayState.resultText = 'やった！';
-      } else {
-        lookAwayState.losses += 1;
-        lookAwayState.resultText = 'ざんねん';
-      }
-
-      if (lookAwayState.round >= lookAwayState.maxRounds) {
-        lookAwayState.active = false;
-      } else {
-        lookAwayState.round += 1;
-      }
-
-      renderLookAway();
-    }
-
-    function renderLookAway() {
-      const enemy = lookAwayState.enemyChoice ? LOOK_AWAY_DIRECTIONS[lookAwayState.enemyChoice] : null;
-      const currentRound = Math.min(lookAwayState.round, lookAwayState.maxRounds);
-      const finished = !lookAwayState.active && (lookAwayState.wins + lookAwayState.losses) >= lookAwayState.maxRounds;
-      lookAwayOverlay.classList.toggle('open', gameMode === 'lookAway');
-      lookAwayRound.textContent = `ラウンド ${currentRound} / ${lookAwayState.maxRounds}`;
-      lookAwayEnemyFace.textContent = enemy ? `🦭${enemy.emoji}` : '🦭❔';
-      lookAwayEnemyText.textContent = enemy
-        ? `あいての あざらしは ${enemy.label} を向いたよ ${enemy.emoji}`
-        : 'あざらしが どっちを向くかな？';
-      lookAwayResultText.textContent = lookAwayState.resultText || '4ほうこう から えらぼう！';
-      lookAwayWins.textContent = `${lookAwayState.wins}勝`;
-      lookAwayLosses.textContent = `${lookAwayState.losses}敗`;
-      lookAwaySummary.textContent = finished
-        ? `おしまい！ ${lookAwayState.wins}勝 ${lookAwayState.losses}敗 だったよ。もういっかい あそぶ？`
-        : lookAwayState.playerChoice && enemy
-          ? `きみは ${LOOK_AWAY_DIRECTIONS[lookAwayState.playerChoice].label}、あいては ${enemy.label}！`
-          : '3本勝負で、同じ向きを当てたら きみの勝ち！';
-
-      document.querySelectorAll('[data-look-away-direction]').forEach((button) => {
-        button.disabled = finished;
-      });
-    }
-
-    function resetLookAwayGame() {
-      if (gameMode !== 'lookAway') {
-        gameMode = 'lookAway';
-      }
-      lookAwayState = createLookAwayState();
-      lookAwayState.active = true;
-      lookAwayState.resultText = '4ほうこう から えらぼう！';
-      renderLookAway();
-    }
-
-    function stopLookAwayGame() {
-      gameMode = 'main';
-      lookAwayOverlay.classList.remove('open');
     }
 
     function bindIceSlideControls() {
@@ -2126,7 +2323,7 @@
 
     function startIceSlideMode() {
       closePanels();
-      stopSparringMode({ keepStatus: true });
+      stopCurling();
       gameMode = 'iceSlide';
       iceSlideMode = true;
       iceSlideInput = 0;
@@ -2139,37 +2336,238 @@
       if (gameMode === 'iceSlide') gameMode = 'main';
       iceSlideMode = false;
       iceSlideInput = 0;
+      if (gameMode === 'iceSlide') gameMode = 'main';
       iceSlideOverlay.classList.remove('open');
     }
 
-    function startSparringMode() {
+    function bindCurlingControls() {
+      curlingSheet.addEventListener('mousedown', onCurlingPointerDown);
+      window.addEventListener('mousemove', onCurlingPointerMove);
+      window.addEventListener('mouseup', onCurlingPointerUp);
+      curlingSheet.addEventListener('touchstart', onCurlingPointerDown, { passive: false });
+      window.addEventListener('touchmove', onCurlingPointerMove, { passive: false });
+      window.addEventListener('touchend', onCurlingPointerUp);
+
+      curlingLaunchBtn.addEventListener('mousedown', beginCurlingCharge);
+      curlingLaunchBtn.addEventListener('touchstart', beginCurlingCharge, { passive: false });
+      window.addEventListener('mouseup', releaseCurlingCharge);
+      window.addEventListener('touchend', releaseCurlingCharge);
+      curlingLaunchBtn.addEventListener('mouseleave', releaseCurlingCharge);
+    }
+
+    function startCurling() {
       closePanels();
       stopIceSlideMode();
-      clearPendingAction();
-      gameMode = 'sparring';
-      sparringInput = 0;
-      sparringPointerX = null;
-      sparringOverlay.classList.add('open');
-      gameShell.classList.add('sparring-mode');
-      initializeSparringState();
-      renderSparring();
-      render();
+      gameMode = 'curling';
+      curlingState = createCurlingState();
+      curlingState.active = true;
+      initializeCurlingLayout();
+      curlingOverlay.classList.add('open');
+      renderCurling();
     }
 
-    function stopSparringMode(options = {}) {
-      if (gameMode === 'sparring') gameMode = 'main';
-      sparringInput = 0;
-      sparringPointerX = null;
-      sparringOverlay.classList.remove('open');
-      gameShell.classList.remove('sparring-mode');
-      render();
+    function stopCurling() {
+      if (gameMode === 'curling') gameMode = 'main';
+      curlingState = createCurlingState();
+      curlingOverlay.classList.remove('open');
+      renderCurling();
     }
 
-    function restartSparring() {
-      if (gameMode !== 'sparring') return;
-      initializeSparringState();
-      renderSparring();
-      render();
+    function initializeCurlingLayout() {
+      const rect = curlingSheet.getBoundingClientRect();
+      curlingState.arena.width = rect.width;
+      curlingState.arena.height = rect.height;
+      curlingState.house.x = rect.width * 0.5;
+      curlingState.house.y = rect.height * 0.3;
+      curlingState.house.rings = 120;
+      curlingState.stone.x = rect.width * 0.5;
+      curlingState.stone.y = rect.height * 0.83;
+      curlingState.stone.vx = 0;
+      curlingState.stone.vy = 0;
+      curlingState.direction = { x: 0, y: -1 };
+      curlingState.directionAngle = -Math.PI / 2;
+    }
+
+    function onCurlingPointerDown(event) {
+      if (!curlingState.active || curlingState.shotTaken || curlingState.charging) return;
+      event.preventDefault();
+      curlingState.dragging = true;
+      curlingState.aiming = true;
+      updateCurlingAim(event);
+      renderCurling();
+    }
+
+    function onCurlingPointerMove(event) {
+      if (!curlingState.active || !curlingState.dragging) return;
+      event.preventDefault();
+      updateCurlingAim(event);
+      renderCurling();
+    }
+
+    function onCurlingPointerUp() {
+      if (!curlingState.active) return;
+      curlingState.dragging = false;
+      renderCurling();
+    }
+
+    function beginCurlingCharge(event) {
+      if (!curlingState.active || curlingState.shotTaken) return;
+      event.preventDefault();
+      curlingState.charging = true;
+      curlingState.statusText = 'パワー調整中… はなすとショット！';
+      renderCurling();
+    }
+
+    function releaseCurlingCharge() {
+      if (!curlingState.active || !curlingState.charging) return;
+      curlingState.charging = false;
+      shootStone();
+    }
+
+    function updateCurlingAim(event) {
+      const point = getPointerPosition(event, curlingSheet);
+      if (!point) return;
+      const dx = point.x - curlingState.stone.x;
+      const dy = point.y - curlingState.stone.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance < 12) return;
+      curlingState.direction = { x: dx / distance, y: dy / distance };
+      curlingState.directionAngle = Math.atan2(curlingState.direction.y, curlingState.direction.x);
+      curlingState.statusText = '方向OK。長押しでパワーをためてショットしよう。';
+    }
+
+    function getPointerPosition(event, element) {
+      const rect = element.getBoundingClientRect();
+      const source = event.touches ? event.touches[0] : event.changedTouches ? event.changedTouches[0] : event;
+      if (!source) return null;
+      return {
+        x: source.clientX - rect.left,
+        y: source.clientY - rect.top
+      };
+    }
+
+    function shootStone() {
+      if (!curlingState.active || curlingState.shotTaken) return;
+      const speed = 120 + (curlingState.power * 360);
+      curlingState.stone.vx = curlingState.direction.x * speed;
+      curlingState.stone.vy = curlingState.direction.y * speed;
+      curlingState.aiming = false;
+      curlingState.shotTaken = true;
+      curlingState.statusText = 'ストーンがすべっている…';
+      curlingState.resultText = 'ストーンが止まるまで見守ろう。';
+      curlingState.hasScore = false;
+      renderCurling();
+    }
+
+    function calcScore() {
+      const dx = curlingState.stone.x - curlingState.house.x;
+      const dy = curlingState.stone.y - curlingState.house.y;
+      const distance = Math.hypot(dx, dy);
+      const maxDistance = curlingState.house.rings;
+      const normalized = clamp(1 - (distance / maxDistance), 0, 1);
+      return Math.round(normalized * 100);
+    }
+
+    function updateCurling(dt) {
+      if (!curlingState.active) return;
+
+      if (curlingState.charging && !curlingState.shotTaken) {
+        const powerDelta = dt * 1.3 * curlingState.chargeDirection;
+        let nextPower = curlingState.power + powerDelta;
+        if (nextPower >= 1) {
+          nextPower = 1;
+          curlingState.chargeDirection = -1;
+        } else if (nextPower <= 0.08) {
+          nextPower = 0.08;
+          curlingState.chargeDirection = 1;
+        }
+        curlingState.power = nextPower;
+      }
+
+      if (!curlingState.shotTaken) {
+        renderCurling();
+        return;
+      }
+
+      const friction = Math.pow(0.985, dt * 60);
+      curlingState.stone.vx *= friction;
+      curlingState.stone.vy *= friction;
+      curlingState.stone.x += curlingState.stone.vx * dt;
+      curlingState.stone.y += curlingState.stone.vy * dt;
+      reflectCurlingStone();
+
+      const speed = Math.hypot(curlingState.stone.vx, curlingState.stone.vy);
+      if (speed < 8) {
+        curlingState.stone.vx = 0;
+        curlingState.stone.vy = 0;
+        if (!curlingState.hasScore) {
+          curlingState.score = calcScore();
+          curlingState.hasScore = true;
+          curlingState.statusText = 'ショット終了！ リトライでもう一回遊べるよ。';
+          curlingState.resultText = buildCurlingResultText(curlingState.score);
+        }
+      }
+
+      renderCurling();
+    }
+
+    function reflectCurlingStone() {
+      const radius = curlingState.arena.stoneRadius;
+      const maxX = curlingState.arena.width - radius - 18;
+      const minX = radius + 18;
+      const maxY = curlingState.arena.height - radius - 18;
+      const minY = radius + 18;
+
+      if (curlingState.stone.x <= minX) {
+        curlingState.stone.x = minX;
+        curlingState.stone.vx = Math.abs(curlingState.stone.vx) * 0.82;
+      } else if (curlingState.stone.x >= maxX) {
+        curlingState.stone.x = maxX;
+        curlingState.stone.vx = -Math.abs(curlingState.stone.vx) * 0.82;
+      }
+
+      if (curlingState.stone.y <= minY) {
+        curlingState.stone.y = minY;
+        curlingState.stone.vy = Math.abs(curlingState.stone.vy) * 0.82;
+      } else if (curlingState.stone.y >= maxY) {
+        curlingState.stone.y = maxY;
+        curlingState.stone.vy = -Math.abs(curlingState.stone.vy) * 0.82;
+      }
+    }
+
+    function buildCurlingResultText(score) {
+      if (score >= 90) return `すごい！ 中心近くまで寄せて ${score} 点！`;
+      if (score >= 65) return `いい感じ！ ハウスの中に収まって ${score} 点。`;
+      if (score >= 35) return `まずまず！ 次はもう少し中心をねらって ${score} 点。`;
+      return `外側ぎりぎりで ${score} 点。方向とパワーを調整して再挑戦！`;
+    }
+
+    function renderCurling() {
+      const visible = curlingState.active;
+      curlingOverlay.classList.toggle('open', visible);
+      curlingHouse.style.left = `${curlingState.house.x}px`;
+      curlingHouse.style.top = `${curlingState.house.y}px`;
+      curlingStone.style.left = `${curlingState.stone.x}px`;
+      curlingStone.style.top = `${curlingState.stone.y}px`;
+      curlingPowerFill.style.width = `${Math.round(curlingState.power * 100)}%`;
+      curlingPowerText.textContent = `${Math.round(curlingState.power * 100)}%`;
+      curlingScoreValue.textContent = String(curlingState.score);
+      curlingStatusText.textContent = curlingState.statusText;
+      curlingResultText.textContent = curlingState.resultText;
+      curlingResultCard.classList.toggle('visible', curlingState.shotTaken || curlingState.hasScore);
+
+      const aimLength = 110;
+      curlingAimLine.style.left = `${curlingState.stone.x}px`;
+      curlingAimLine.style.top = `${curlingState.stone.y}px`;
+      curlingAimLine.style.width = `${aimLength}px`;
+      curlingAimLine.style.transform = `rotate(${curlingState.directionAngle}rad)`;
+      curlingAimLine.classList.toggle('visible', curlingState.aiming && !curlingState.shotTaken);
+      curlingAimAnchor.style.left = `${curlingState.stone.x + curlingState.direction.x * aimLength}px`;
+      curlingAimAnchor.style.top = `${curlingState.stone.y + curlingState.direction.y * aimLength}px`;
+      curlingAimAnchor.classList.toggle('visible', curlingState.aiming && !curlingState.shotTaken);
+
+      curlingLaunchBtn.disabled = curlingState.shotTaken;
+      curlingRetryBtn.disabled = !curlingState.active;
     }
 
     function initializeIceSlideState() {
@@ -2766,8 +3164,8 @@
         requestAnimationFrame(loop);
         return;
       }
-      if (gameMode === 'lookAway') {
-        renderLookAway();
+      if (gameMode === 'curling' && curlingState.active) {
+        updateCurling(dt);
         requestAnimationFrame(loop);
         return;
       }
