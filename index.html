@@ -362,7 +362,7 @@
       right: 18px;
       bottom: 18px;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 12px;
       z-index: 4;
     }
@@ -1563,7 +1563,6 @@
       <button class="nav-btn" data-panel="food">ごはん 🍚</button>
       <button class="nav-btn" data-panel="toy">おもちゃ ⚽</button>
       <button class="nav-btn" data-panel="training">トレーニング</button>
-      <button class="nav-btn" data-mode="lookAway">ホイ 👀</button>
       <button class="nav-btn" data-panel="settings">せってい</button>
     </div>
 
@@ -1600,6 +1599,27 @@
               <p>30秒でできる軽いミニゲーム。成功すると、たいりょくとなかよしが上がる。</p>
             </div>
             <button class="action-btn" id="startTrainingBtn">はじめる</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>氷スライド</h4>
+              <p>専用画面で起動するテストミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startIceSlideTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>カーリング</h4>
+              <p>専用画面で1ショットを遊べる独立ミニゲーム。</p>
+            </div>
+            <button class="action-btn" id="startCurlingTrainingBtn">開始</button>
+          </div>
+          <div class="option-card">
+            <div>
+              <h4>ホイ</h4>
+              <p>専用画面で起動するミニゲーム（現在メンテ中）。</p>
+            </div>
+            <button class="action-btn" id="startLookAwayTrainingBtn">開始</button>
           </div>
         </div>
         <div class="training-box" id="trainingBox" hidden>
@@ -1640,20 +1660,6 @@
               <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">状態を最初からに戻す</div>
             </div>
             <button class="danger-btn" id="resetBtn">リセット</button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <strong>氷スライド</strong>
-              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">簡易テストモードを起動する</div>
-            </div>
-            <button class="action-btn" id="startIceSlideBtn">開始</button>
-          </div>
-          <div class="setting-row">
-            <div>
-              <strong>カーリング</strong>
-              <div style="font-size: 13px; color: var(--soft); margin-top: 4px;">1ショットで中心をねらう独立ミニゲーム</div>
-            </div>
-            <button class="action-btn" id="startCurlingBtn">開始</button>
           </div>
         </div>
       </div>
@@ -1705,6 +1711,19 @@
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="curling-launch-btn" id="curlingLaunchBtn">長押しでショット</button>
           <button class="curling-retry-btn" id="curlingRetryBtn">リトライ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="look-away-overlay" id="lookAwayOverlay">
+      <div class="look-away-card">
+        <div class="look-away-header">
+          <h3 class="look-away-title">ホイ</h3>
+          <button class="close-btn" id="closeLookAwayBtn" type="button">×</button>
+        </div>
+        <p class="look-away-subtext">このミニゲームは現在メンテナンス中です。</p>
+        <div class="look-away-footer">
+          <button class="action-btn" id="lookAwayBackBtn" type="button">メインへ戻る</button>
         </div>
       </div>
     </div>
@@ -1938,14 +1957,18 @@
     const timeToggle = document.getElementById('timeToggle');
     const volumeSlider = document.getElementById('volumeSlider');
     const resetBtn = document.getElementById('resetBtn');
-    const startIceSlideBtn = document.getElementById('startIceSlideBtn');
+    const startIceSlideTrainingBtn = document.getElementById('startIceSlideTrainingBtn');
     const iceSlideOverlay = document.getElementById('iceSlideOverlay');
     const iceSlideArena = document.getElementById('iceSlideArena');
     const iceSlideSeal = document.getElementById('iceSlideSeal');
     const closeIceSlideBtn = document.getElementById('closeIceSlideBtn');
-    const startCurlingBtn = document.getElementById('startCurlingBtn');
+    const startCurlingTrainingBtn = document.getElementById('startCurlingTrainingBtn');
     const curlingOverlay = document.getElementById('curlingOverlay');
     const closeCurlingBtn = document.getElementById('closeCurlingBtn');
+    const startLookAwayTrainingBtn = document.getElementById('startLookAwayTrainingBtn');
+    const lookAwayOverlay = document.getElementById('lookAwayOverlay');
+    const closeLookAwayBtn = document.getElementById('closeLookAwayBtn');
+    const lookAwayBackBtn = document.getElementById('lookAwayBackBtn');
     const curlingSheet = document.getElementById('curlingSheet');
     const curlingHouse = document.getElementById('curlingHouse');
     const curlingStone = document.getElementById('curlingStone');
@@ -2041,6 +2064,7 @@
     let sparringState = createSparringState();
     let sparringInput = 0;
     let sparringPointerX = null;
+    let lookAwayMode = false;
 
     init();
 
@@ -2138,12 +2162,6 @@
     function bindEvents() {
       document.querySelectorAll('.nav-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
-          if (btn.dataset.mode === 'lookAway') {
-            // 壊れている追加機能は一時無効化
-            state.lastStatus = 'このモードは現在メンテナンス中';
-            render();
-            return;
-          }
           openPanel(btn.dataset.panel);
         });
       });
@@ -2167,10 +2185,13 @@
       window.addEventListener('pointercancel', resetPetInteraction);
       startTrainingBtn.addEventListener('click', startTraining);
       trainingTarget.addEventListener('click', onTrainingTap);
-      startIceSlideBtn.addEventListener('click', startIceSlideMode);
+      startIceSlideTrainingBtn.addEventListener('click', startIceSlideMode);
       closeIceSlideBtn.addEventListener('click', stopIceSlideMode);
-      startCurlingBtn.addEventListener('click', startCurling);
+      startCurlingTrainingBtn.addEventListener('click', startCurling);
       closeCurlingBtn.addEventListener('click', stopCurling);
+      startLookAwayTrainingBtn.addEventListener('click', startLookAwayMode);
+      closeLookAwayBtn.addEventListener('click', stopLookAwayMode);
+      lookAwayBackBtn.addEventListener('click', stopLookAwayMode);
       curlingRetryBtn.addEventListener('click', startCurling);
       bindIceSlideControls();
       bindCurlingControls();
@@ -2199,11 +2220,12 @@
         if (minigame) minigameState = minigame.createState();
         stopIceSlideMode();
         stopCurling();
+        stopLookAwayMode();
         trainingBox.hidden = true;
         clearPendingAction();
         closePanels();
         placeSealInitially();
-          renderFoodList();
+        renderFoodList();
         renderToyList();
         render();
         saveState();
@@ -2397,6 +2419,7 @@
     function startIceSlideMode() {
       closePanels();
       stopCurling();
+      stopLookAwayMode();
       gameMode = 'iceSlide';
       iceSlideMode = true;
       iceSlideInput = 0;
@@ -2431,6 +2454,7 @@
     function startCurling() {
       closePanels();
       stopIceSlideMode();
+      stopLookAwayMode();
       gameMode = 'curling';
       curlingState = createCurlingState();
       curlingState.active = true;
@@ -2444,6 +2468,24 @@
       curlingState = createCurlingState();
       curlingOverlay.classList.remove('open');
       renderCurling();
+    }
+
+    function startLookAwayMode() {
+      closePanels();
+      stopIceSlideMode();
+      stopCurling();
+      gameMode = 'lookAway';
+      lookAwayMode = true;
+      lookAwayOverlay.classList.add('open');
+      state.lastStatus = 'ホイは現在メンテナンス中';
+      render();
+    }
+
+    function stopLookAwayMode() {
+      if (gameMode === 'lookAway') gameMode = 'main';
+      lookAwayMode = false;
+      lookAwayOverlay.classList.remove('open');
+      render();
     }
 
     function initializeCurlingLayout() {
@@ -3239,6 +3281,11 @@
       }
       if (gameMode === 'curling' && curlingState.active) {
         updateCurling(dt);
+        requestAnimationFrame(loop);
+        return;
+      }
+      if (lookAwayMode || gameMode === 'lookAway') {
+        render();
         requestAnimationFrame(loop);
         return;
       }
